@@ -51,7 +51,7 @@ export default function QuickBookPage() {
       api<any>("/api/v1/branches"),
       api<any>("/api/v1/services"),
       api<any>("/api/v1/packages"),
-      api<any>("/api/v1/wash-bays"),
+      api<any>("/api/v1/wash-bays?active_only=true"),
       api<any>("/api/v1/customers?page_size=200"),
     ]).then(([br, svc, pkg, bay, cust]) => {
       setBranches(br.items || []);
@@ -66,7 +66,7 @@ export default function QuickBookPage() {
   }, []);
 
   const branchBays = useMemo(
-    () => bays.filter((b) => !form.branch_id || String(b.branch_id) === String(form.branch_id)),
+    () => bays.filter((b) => b.is_active !== false && (!form.branch_id || String(b.branch_id) === String(form.branch_id))),
     [bays, form.branch_id]
   );
 

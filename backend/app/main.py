@@ -85,6 +85,12 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router)
 
+    # Uploaded branding / media (logo etc.)
+    uploads = settings.uploads_dir
+    uploads.mkdir(parents=True, exist_ok=True)
+    (uploads / "branding").mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=uploads), name="uploads")
+
     # Serve built SPA
     dist = settings.frontend_dist
     if dist.exists():
@@ -95,7 +101,7 @@ def create_app() -> FastAPI:
         @app.get("/{full_path:path}")
         async def spa(full_path: str):
             # don't swallow API
-            if full_path.startswith("api") or full_path == "health":
+            if full_path.startswith("api") or full_path.startswith("uploads") or full_path == "health":
                 return JSONResponse({"detail": "Not found"}, status_code=404)
             candidate = dist / full_path
             if full_path and candidate.exists() and candidate.is_file():

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-09-20
+- Staff phone access: scannable QR + copyable invite/mobile links (LAN hostname & IP helpers) on Launch.
+- Launch hub: Local, LAN, Power Apps, SharePoint, Self-hosted wizards with persisted settings.
+- Customisable wash bays: add / rename / reorder / enable-disable (defaults still seed Bay 1 & 2).
+- Branding: logo upload, accent colour, login background, polished commercial theme.
+- Mobile entry route `/m` for compact staff login + quick ops.
+- Docs: LAUNCH_GUIDE.txt; HOSTING_OPTIONS updated.
+
 ## 0.2.0 — 2026-09-20
 - Phone-first shell: bottom nav (Home, Book, Queue, Bays, Customers, More) + polished SaaS UI.
 - Live Bay Board for exactly two default bays (Bay 1 / Bay 2) with Available / Busy / Offline / Closed, auto Busy when a wash is assigned, manager overrides.

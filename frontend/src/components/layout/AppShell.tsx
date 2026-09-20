@@ -3,11 +3,12 @@ import {
   LayoutDashboard, CalendarPlus, ListOrdered, Users, Car, Sparkles, Package,
   UserCog, Clock3, CreditCard, Receipt, Warehouse, Truck, Wallet, BarChart3,
   Bell, Building2, Plug, Settings, Shield, Activity, Stethoscope, Search,
-  LogOut, Moon, Sun, Menu, X, Droplets, MoreHorizontal, Home
+  LogOut, Moon, Sun, Menu, X, Droplets, MoreHorizontal, Home, Rocket
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../hooks/useTheme";
+import { useBranding } from "../../hooks/useBranding";
 import { api } from "../../lib/api";
 
 const nav = [
@@ -32,6 +33,7 @@ const nav = [
   { to: "/reports", label: "Reports", icon: BarChart3, group: "system" },
   { to: "/notifications", label: "Notifications", icon: Bell, group: "system" },
   { to: "/branches", label: "Branches", icon: Building2, group: "system" },
+  { to: "/launch", label: "Launch", icon: Rocket, group: "system" },
   { to: "/integrations", label: "Integrations", icon: Plug, group: "system" },
   { to: "/admin", label: "Admin", icon: Shield, group: "system" },
   { to: "/audit", label: "Audit Log", icon: Activity, group: "system" },
@@ -53,14 +55,13 @@ const mobilePrimary = [
 export default function AppShell() {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { appName, logoUrl, version, accent } = useBranding();
   const [open, setOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<any>(null);
   const navigate = useNavigate();
   const location = useLocation();
-
-  const brand = useMemo(() => "Car Wash Manager", []);
 
   const search = async (value: string) => {
     setQ(value);
@@ -83,19 +84,25 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
-      {/* Desktop / tablet sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-950 text-slate-100 shadow-xl transition lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-950 text-slate-100 shadow-2xl transition lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800/80">
-          <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-sky-400 to-brand-700 flex items-center justify-center font-extrabold shadow-lg shadow-sky-500/30">
-            CW
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt="" className="h-10 w-10 rounded-2xl object-cover bg-white shadow-lg" />
+          ) : (
+            <div
+              className="h-10 w-10 rounded-2xl flex items-center justify-center font-extrabold shadow-lg text-white"
+              style={{ background: `linear-gradient(135deg, ${accent}, #0369a1)` }}
+            >
+              CW
+            </div>
+          )}
           <div className="min-w-0">
-            <div className="font-semibold leading-tight truncate">{brand}</div>
-            <div className="text-[11px] text-slate-400">v0.2.0 · ZAR</div>
+            <div className="font-semibold leading-tight truncate">{appName}</div>
+            <div className="text-[11px] text-slate-400">v{version} · ZAR</div>
           </div>
           <button className="ml-auto lg:hidden p-2 rounded-lg hover:bg-slate-800" onClick={() => setOpen(false)}>
             <X size={18} />
@@ -109,7 +116,7 @@ export default function AppShell() {
             </NavLink>
           ))}
         </nav>
-        <div className="absolute bottom-0 inset-x-0 p-3 border-t border-slate-800 bg-slate-950/95">
+        <div className="absolute bottom-0 inset-x-0 p-3 border-t border-slate-800 bg-slate-950/95 backdrop-blur">
           <div className="text-sm font-medium truncate">{user?.full_name}</div>
           <div className="text-[11px] text-slate-500 truncate">{user?.role_name || "Admin"}</div>
         </div>
@@ -118,10 +125,13 @@ export default function AppShell() {
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
       <div className="flex-1 min-w-0 flex flex-col pb-20 lg:pb-0">
-        <header className="sticky top-0 z-20 border-b border-slate-200/80 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md px-3 md:px-4 py-2.5 flex items-center gap-2 md:gap-3">
+        <header className="sticky top-0 z-20 border-b border-slate-200/80 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md px-3 md:px-4 py-2.5 flex items-center gap-2 md:gap-3 shadow-sm shadow-slate-200/40 dark:shadow-none">
           <button className="lg:hidden btn-secondary !px-2.5 !min-h-[40px]" onClick={() => setOpen(true)} aria-label="Menu">
             <Menu size={18} />
           </button>
+          {logoUrl && (
+            <img src={logoUrl} alt="" className="h-8 w-8 rounded-lg object-cover hidden sm:block lg:hidden" />
+          )}
           <div className="relative flex-1 max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
@@ -171,8 +181,7 @@ export default function AppShell() {
         </main>
       </div>
 
-      {/* Phone bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md pb-safe">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md pb-safe shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
         <div className="grid grid-cols-6 gap-0.5 px-1 pt-1">
           {mobilePrimary.map((item) => {
             const active = item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to);

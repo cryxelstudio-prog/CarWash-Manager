@@ -126,7 +126,20 @@ DEFAULT_SETTINGS = [
     ("setup.completed", "false", "boolean", "system", "First-run completed"),
     ("loyalty.points_per_rand", "1", "number", "loyalty", "Points earned per R1"),
     ("hosting.cors_origins_extra", "", "string", "hosting", "Extra CORS origins (comma-separated) for Power Apps / LAN"),
-    ("app.version", "0.2.0", "string", "system", "Displayed app version"),
+    ("app.version", "0.3.0", "string", "system", "Displayed app version"),
+    ("app.login_background_url", "", "string", "branding", "Optional login background image URL"),
+    ("app.theme_default", "system", "string", "branding", "Default theme: light/dark/system"),
+    ("launch.public_base_url", "", "string", "launch", "Public / reverse-proxy base URL for QR and invites"),
+    ("launch.bind_host", "0.0.0.0", "string", "launch", "Suggested bind host"),
+    ("launch.port", "8787", "string", "launch", "Suggested listen port"),
+    ("powerapps.environment_url", "", "string", "powerapps", "Power Apps environment URL"),
+    ("powerapps.app_id", "", "string", "powerapps", "Optional Power Apps app ID"),
+    ("powerapps.api_base_url", "", "string", "powerapps", "API base URL exposed to connector"),
+    ("powerapps.cors_origins", "", "string", "powerapps", "CORS origins for Power Apps"),
+    ("sharepoint.site_url", "", "string", "sharepoint", "SharePoint site URL"),
+    ("sharepoint.list_name", "", "string", "sharepoint", "Optional list name"),
+    ("sharepoint.library_name", "", "string", "sharepoint", "Optional library name"),
+    ("sharepoint.doc_library", "", "string", "sharepoint", "Document library for invoices/photos"),
 ]
 
 
@@ -174,12 +187,16 @@ def ensure_bootstrap(db: Session) -> None:
             )
 
     for key, value, vtype, category, desc in DEFAULT_SETTINGS:
-        if not db.query(ApplicationSetting).filter(ApplicationSetting.key == key).first():
+        row = db.query(ApplicationSetting).filter(ApplicationSetting.key == key).first()
+        if not row:
             db.add(
                 ApplicationSetting(
                     key=key, value=value, value_type=vtype, category=category, description=desc
                 )
             )
+        elif key == "app.version" and row.value != value:
+            # Keep displayed version current on upgrades
+            row.value = value
 
     db.commit()
     try:
@@ -201,8 +218,11 @@ def get_setting(db: Session, key: str, default: str | None = None) -> str | None
 
 
 def set_setting(db: Session, key: str, value: str, category: str = "general") -> None:
+    db.flush()
     row = db.query(ApplicationSetting).filter(ApplicationSetting.key == key).first()
     if row:
         row.value = value
+        if category and not row.category:
+            row.category = category
     else:
         db.add(ApplicationSetting(key=key, value=value, category=category))

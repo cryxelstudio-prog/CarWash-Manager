@@ -32,6 +32,8 @@ import ActivityPage from "./pages/ActivityPage";
 import DiagnosticsPage from "./pages/DiagnosticsPage";
 import BackupPage from "./pages/BackupPage";
 import HelpPage from "./pages/HelpPage";
+import LaunchPage from "./pages/LaunchPage";
+import MobileEntryPage from "./pages/MobileEntryPage";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { loading, user, setupRequired } = useAuth();
@@ -49,6 +51,7 @@ export default function App() {
     <Routes>
       <Route path="/setup" element={setupRequired ? <SetupWizard /> : <Navigate to="/" replace />} />
       <Route path="/login" element={!setupRequired && !user ? <LoginPage /> : <Navigate to="/" replace />} />
+      <Route path="/m" element={<MobileEntryPage />} />
       <Route
         path="/"
         element={
@@ -78,6 +81,7 @@ export default function App() {
         <Route path="branches" element={<BranchesPage />} />
         <Route path="wash-bays" element={<WashBaysPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="launch" element={<LaunchPage />} />
         <Route path="integrations" element={<IntegrationsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="admin" element={<AdminPage />} />

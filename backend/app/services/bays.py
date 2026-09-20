@@ -27,41 +27,69 @@ TERMINAL_STAGES = {
 
 
 def ensure_default_bays(db: Session) -> None:
-    """Ensure every active branch has exactly Bay 1 and Bay 2 as defaults.
+    """Seed Bay 1 + Bay 2 only when a branch has no wash bays yet.
 
-    Extra bays beyond #1/#2 are left intact (not deleted) so operators keep
-    historical data, but missing Bay 1/2 are created. Soft-deleted Bay 1/2
-    are restored.
+    Never renames, reactivates, or restores existing / soft-deleted bays so
+    operators can customise N bays freely after first install.
     """
     branches = db.query(Branch).filter(Branch.is_deleted.is_(False)).all()
     for branch in branches:
+        count = (
+            db.query(WashBay)
+            .filter(WashBay.branch_id == branch.id, WashBay.is_deleted.is_(False))
+            .count()
+        )
+        if count > 0:
+            continue
         for num in (1, 2):
-            bay = (
-                db.query(WashBay)
-                .filter(WashBay.branch_id == branch.id, WashBay.bay_number == num)
-                .order_by(WashBay.is_deleted.asc(), WashBay.id.asc())
-                .first()
-            )
-            if bay:
-                if bay.is_deleted:
-                    bay.is_deleted = False
-                    bay.deleted_at = None
-                bay.name = f"Bay {num}"
-                bay.is_active = True
-                if not bay.status:
-                    bay.status = BayStatus.AVAILABLE.value
-            else:
-                db.add(
-                    WashBay(
-                        branch_id=branch.id,
-                        name=f"Bay {num}",
-                        bay_number=num,
-                        bay_type="STANDARD",
-                        status=BayStatus.AVAILABLE.value,
-                        is_active=True,
-                    )
+            db.add(
+                WashBay(
+                    branch_id=branch.id,
+                    name=f"Bay {num}",
+                    bay_number=num,
+                    bay_type="STANDARD",
+                    status=BayStatus.AVAILABLE.value,
+                    is_active=True,
                 )
+            )
     db.commit()
+
+
+def next_bay_number(db: Session, branch_id: int) -> int:
+    row = (
+        db.query(WashBay)
+        .filter(WashBay.branch_id == branch_id, WashBay.is_deleted.is_(False))
+        .order_by(WashBay.bay_number.desc())
+        .first()
+    )
+    return (row.bay_number + 1) if row else 1
+
+
+def soft_delete_bay(db: Session, bay_id: int) -> WashBay:
+    bay = db.get(WashBay, bay_id)
+    if not bay or bay.is_deleted:
+        raise ValueError("Wash bay not found")
+    bay.is_deleted = True
+    bay.deleted_at = datetime.utcnow()
+    bay.is_active = False
+    db.commit()
+    db.refresh(bay)
+    return bay
+
+
+def reorder_bays(db: Session, items: list[dict]) -> list[WashBay]:
+    """items: [{id, bay_number}] — updates sort order via bay_number."""
+    updated: list[WashBay] = []
+    for item in items:
+        bay = db.get(WashBay, int(item["id"]))
+        if not bay or bay.is_deleted:
+            continue
+        bay.bay_number = int(item["bay_number"])
+        updated.append(bay)
+    db.commit()
+    for b in updated:
+        db.refresh(b)
+    return updated
 
 
 def sync_bay_occupancy(db: Session, wash_bay_id: int | None = None) -> None:
@@ -140,13 +168,15 @@ def _eta_for(booking: Booking) -> str | None:
     return f"~{mins} min"
 
 
-def bay_board(db: Session, branch_id: int | None = None) -> dict:
+def bay_board(db: Session, branch_id: int | None = None, active_only: bool = True) -> dict:
     sync_bay_occupancy(db)
     q = (
         db.query(WashBay)
         .options(joinedload(WashBay.branch), joinedload(WashBay.assigned_employee))
         .filter(WashBay.is_deleted.is_(False))
     )
+    if active_only:
+        q = q.filter(WashBay.is_active.is_(True))
     if branch_id:
         q = q.filter(WashBay.branch_id == branch_id)
     bays = q.order_by(WashBay.branch_id, WashBay.bay_number, WashBay.id).all()
@@ -171,7 +201,6 @@ def bay_board(db: Session, branch_id: int | None = None) -> dict:
             .order_by(Booking.started_at.desc(), Booking.priority.desc(), Booking.id.desc())
             .first()
         )
-        # Prefer in-progress wash stages if multiple
         if not current:
             current = (
                 db.query(Booking)

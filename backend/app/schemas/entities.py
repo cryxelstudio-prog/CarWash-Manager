@@ -312,8 +312,8 @@ class InventoryItemOut(InventoryItemIn):
 
 class WashBayIn(BaseModel):
     branch_id: int
-    name: str
-    bay_number: int = 1
+    name: str = "Bay"
+    bay_number: int = 0
     bay_type: str = "STANDARD"
     status: str = "AVAILABLE"
     status_locked: bool = False

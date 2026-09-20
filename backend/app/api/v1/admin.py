@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Request, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.v1.helpers import bad_request, not_found
@@ -15,6 +16,7 @@ from app.schemas.entities import IntegrationOut, NotificationOut, SettingIn
 from app.security.deps import AuthContext, CSRFUser, require_permission
 from app.services.backup import create_backup, list_backups, restore_backup
 from app.services.bootstrap import get_setting, set_setting
+from app.services.launch import detect_access_urls, launch_status, save_launch_platform
 
 router = APIRouter(tags=["admin"])
 
@@ -42,6 +44,7 @@ def branding(db: Session = Depends(get_db)):
     keys = [
         "app.name", "company.name", "company.phone", "company.email", "company.address",
         "app.accent_colour", "app.logo_url", "app.favicon_url", "app.receipt_footer",
+        "app.login_background_url", "app.theme_default",
         "locale.currency", "locale.currency_symbol", "locale.timezone", "locale.date_format", "locale.tax_rate",
         "hosting.cors_origins_extra", "app.version",
     ]
@@ -213,3 +216,119 @@ def list_users(db: Session = Depends(get_db), ctx: AuthContext = Depends(require
             for u in rows
         ]
     }
+
+
+# ── Launch hub / staff access / branding upload ────────────────────
+
+
+class LaunchPlatformIn(BaseModel):
+    fields: dict = Field(default_factory=dict)
+
+
+@router.get("/launch")
+def get_launch(
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage", "dashboard.view")),
+):
+    return launch_status(db)
+
+
+@router.get("/staff-access")
+def staff_access(
+    request: Request,
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage", "dashboard.view", "queue.manage")),
+):
+    """LAN + invite helpers for phone QR / link login."""
+    access = detect_access_urls(db)
+    # Prefer request host when available (matches what the admin browser used)
+    try:
+        base = str(request.base_url).rstrip("/")
+        if base and "127.0.0.1" not in base and "localhost" not in base:
+            access["browser_url"] = base
+            access["invite_link"] = f"{base}/login"
+            access["mobile_link"] = f"{base}/m"
+            access["qr_target"] = f"{base}/m"
+        else:
+            access["browser_url"] = base
+    except Exception:  # noqa: BLE001
+        access["browser_url"] = access["local_url"]
+    return access
+
+
+@router.put("/launch/{platform}")
+def put_launch_platform(
+    platform: str,
+    payload: LaunchPlatformIn,
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage")),
+):
+    try:
+        return save_launch_platform(db, platform, payload.fields or {})
+    except ValueError as e:
+        bad_request(str(e))
+
+
+ALLOWED_LOGO = {".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"}
+
+
+@router.post("/branding/logo")
+async def upload_logo(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage")),
+):
+    settings = get_settings()
+    suffix = Path(file.filename or "logo.png").suffix.lower() or ".png"
+    if suffix not in ALLOWED_LOGO:
+        bad_request(f"Unsupported logo type {suffix}. Use PNG, JPG, WEBP, SVG or GIF.")
+    dest_dir = settings.uploads_dir / "branding"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    # Clear previous logo variants
+    for old in dest_dir.glob("logo.*"):
+        try:
+            old.unlink()
+        except OSError:
+            pass
+    dest = dest_dir / f"logo{suffix}"
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        bad_request("Logo must be under 5 MB")
+    dest.write_bytes(content)
+    url = f"/uploads/branding/logo{suffix}"
+    set_setting(db, "app.logo_url", url, category="branding")
+    db.commit()
+    return {"message": "Logo uploaded", "url": url, "path": str(dest)}
+
+
+@router.put("/branding")
+def update_branding(
+    payload: dict,
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage")),
+):
+    allowed = {
+        "app.name",
+        "company.name",
+        "company.phone",
+        "company.email",
+        "company.address",
+        "app.accent_colour",
+        "app.logo_url",
+        "app.favicon_url",
+        "app.receipt_footer",
+        "app.login_background_url",
+        "app.theme_default",
+        "locale.currency",
+        "locale.currency_symbol",
+        "locale.timezone",
+        "locale.date_format",
+        "locale.tax_rate",
+        "hosting.cors_origins_extra",
+    }
+    for key, value in (payload or {}).items():
+        if key in allowed:
+            set_setting(db, key, "" if value is None else str(value), category=key.split(".")[0])
+    db.commit()
+    keys = list(allowed) + ["app.version"]
+    return {k: get_setting(db, k) for k in keys}

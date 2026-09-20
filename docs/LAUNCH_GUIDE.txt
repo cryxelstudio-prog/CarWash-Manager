@@ -1,0 +1,49 @@
+Car Wash Manager — Launch Guide
+================================
+Version 0.3.0
+
+Use the in-app **Launch** sidebar page for wizards. This file is the short reference.
+
+1) Staff phones (QR + link)
+---------------------------
+- Open Launch (or Settings tip).
+- Show the QR code on the laptop — staff scan with their phone camera.
+- QR points at /m (compact mobile entry) using the current host (LAN IP or public URL).
+- Copy the invite link (/login) if QR is awkward.
+- Suggested LAN URL: http://<hostname-or-IP>:8787/m
+- Firewall: allow inbound TCP 8787 on the PC. Same Wi‑Fi required.
+
+2) Local / This PC
+------------------
+- Run.cmd / ./scripts/dev_run.sh
+- Opens http://127.0.0.1:8787
+- Bind tip: 0.0.0.0 so LAN devices can connect
+
+3) LAN / Company Wi‑Fi
+----------------------
+- App already binds 0.0.0.0:8787 by default
+- Launch page lists hostname + detected LAN IPs + QR
+- Windows Firewall may prompt — allow the port
+
+4) Power Apps (optional)
+------------------------
+- Launch → Power Apps card
+- Enter Environment URL, optional App ID, API base URL, CORS origins
+- Saved to ApplicationSettings + Integration config (status Configured when set)
+- OpenAPI: /api/docs  (JSON: /api/openapi.json)
+- Also set CARWASH_CORS_ORIGINS_EXTRA and restart for process-level CORS
+- Core app never requires Power Apps
+
+5) SharePoint (optional)
+------------------------
+- Launch → SharePoint card
+- Site URL + optional list / library / document library for invoices & photos
+- Never required for core offline operation
+
+6) Self-hosted / Custom URL
+---------------------------
+- Set public base URL (https://carwash.example.com)
+- QR and invite links prefer this over LAN IP
+- Reverse-proxy to uvicorn :8787; keep ./data ./uploads ./backups ./logs
+
+See also: docs/HOSTING_OPTIONS.txt, docs/POWER_APPS_INTEGRATION.txt, docs/SHAREPOINT_SETUP.txt

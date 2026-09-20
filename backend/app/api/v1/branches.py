@@ -1,7 +1,9 @@
 """Branches and wash bays."""
 from __future__ import annotations
 
+
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.v1.helpers import bad_request, not_found
@@ -9,9 +11,13 @@ from app.core.database import get_db
 from app.models import Branch, WashBay
 from app.schemas.entities import BayStatusUpdate, BranchIn, BranchOut, WashBayIn, WashBayOut
 from app.security.deps import AuthContext, require_permission
-from app.services.bays import bay_board, ensure_default_bays, set_bay_status
+from app.services.bays import bay_board, ensure_default_bays, next_bay_number, reorder_bays, set_bay_status, soft_delete_bay
 
 router = APIRouter(tags=["branches"])
+
+
+class BayReorderIn(BaseModel):
+    items: list[dict] = Field(default_factory=list)  # [{id, bay_number}]
 
 
 @router.get("/branches")
@@ -47,26 +53,39 @@ def update_branch(branch_id: int, payload: BranchIn, db: Session = Depends(get_d
 @router.get("/wash-bays/board")
 def wash_bay_board(
     branch_id: int | None = None,
+    include_inactive: bool = False,
     db: Session = Depends(get_db),
     ctx: AuthContext = Depends(require_permission("queue.manage", "branches.manage", "dashboard.view", "bookings.view")),
 ):
     ensure_default_bays(db)
-    return bay_board(db, branch_id=branch_id)
+    return bay_board(db, branch_id=branch_id, active_only=not include_inactive)
 
 
 @router.get("/wash-bays")
-def list_bays(branch_id: int | None = None, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("branches.manage", "queue.manage", "dashboard.view", "bookings.view"))):
+def list_bays(
+    branch_id: int | None = None,
+    active_only: bool = False,
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("branches.manage", "queue.manage", "dashboard.view", "bookings.view")),
+):
     ensure_default_bays(db)
     q = db.query(WashBay).filter(WashBay.is_deleted.is_(False))
     if branch_id:
         q = q.filter(WashBay.branch_id == branch_id)
-    rows = q.order_by(WashBay.bay_number).all()
+    if active_only:
+        q = q.filter(WashBay.is_active.is_(True))
+    rows = q.order_by(WashBay.bay_number, WashBay.id).all()
     return {"items": [WashBayOut.model_validate(b) for b in rows], "total": len(rows)}
 
 
 @router.post("/wash-bays", status_code=201)
 def create_bay(payload: WashBayIn, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("branches.manage"))):
-    b = WashBay(**payload.model_dump())
+    data = payload.model_dump()
+    if not data.get("bay_number"):
+        data["bay_number"] = next_bay_number(db, data["branch_id"])
+    if not data.get("name"):
+        data["name"] = f"Bay {data['bay_number']}"
+    b = WashBay(**data)
     db.add(b)
     db.commit()
     db.refresh(b)
@@ -82,6 +101,21 @@ def update_bay(bay_id: int, payload: WashBayIn, db: Session = Depends(get_db), c
         setattr(b, k, v)
     db.commit()
     return WashBayOut.model_validate(b)
+
+
+@router.delete("/wash-bays/{bay_id}")
+def delete_bay(bay_id: int, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("branches.manage"))):
+    try:
+        soft_delete_bay(db, bay_id)
+    except ValueError as e:
+        not_found(str(e))
+    return {"message": "Bay removed", "id": bay_id}
+
+
+@router.post("/wash-bays/reorder")
+def reorder_bay_list(payload: BayReorderIn, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("branches.manage"))):
+    rows = reorder_bays(db, payload.items)
+    return {"items": [WashBayOut.model_validate(b) for b in rows], "total": len(rows)}
 
 
 @router.post("/wash-bays/{bay_id}/status")
