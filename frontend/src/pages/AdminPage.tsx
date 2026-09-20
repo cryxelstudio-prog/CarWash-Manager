@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { Copy, Check, Link2 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import { api, ApiError } from "../lib/api";
 import { useEasyMode } from "../hooks/useEasyMode";
@@ -19,6 +20,19 @@ type UserRow = {
   is_super_admin: boolean;
   last_login_at?: string | null;
 };
+type InviteRow = {
+  id: number;
+  role_name?: string | null;
+  role_code?: string | null;
+  branch_name?: string | null;
+  status: string;
+  expires_at?: string | null;
+  used_at?: string | null;
+  created_by_name?: string | null;
+  note?: string | null;
+  invite_url?: string;
+  token?: string;
+};
 
 const emptyForm = {
   id: null as number | null,
@@ -36,28 +50,48 @@ export default function AdminPage() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [invites, setInvites] = useState<InviteRow[]>([]);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [edit, setEdit] = useState({ ...emptyForm });
   const [showForm, setShowForm] = useState(false);
+  const [inviteRole, setInviteRole] = useState("");
+  const [inviteDays, setInviteDays] = useState("7");
+  const [inviteNote, setInviteNote] = useState("");
+  const [lastInviteUrl, setLastInviteUrl] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const load = async () => {
-    const [u, r] = await Promise.all([
+    const [u, r, inv] = await Promise.all([
       api<{ items: UserRow[] }>("/api/v1/users"),
       api<{ items: Role[] }>("/api/v1/roles"),
+      api<{ items: InviteRow[] }>("/api/v1/invites"),
     ]);
     setUsers(u.items || []);
     setRoles(r.items || []);
+    setInvites(inv.items || []);
+    if (!inviteRole) {
+      const def = (r.items || []).find((x) => x.name === "operator") || (r.items || [])[0];
+      if (def) setInviteRole(String(def.id));
+    }
   };
 
   useEffect(() => {
     if (!canManageUsers) return;
     load().catch((e) => setError(e instanceof ApiError ? e.detail : e.message));
-  }, [canManageUsers]);
+  }, [canManageUsers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!canManageUsers) {
     return <Navigate to="/" replace />;
   }
+
+  const inviteableRoles = roles.filter((r) => {
+    if (r.name === "customer" || r.name === "custom") return false;
+    if (r.name === "super_admin" && !(me?.is_super_admin || (me?.role_name || "").toLowerCase().includes("owner"))) {
+      return false;
+    }
+    return true;
+  });
 
   const openNew = () => {
     const defaultRole = roles.find((x) => x.name === "operator") || roles[0];
@@ -138,11 +172,53 @@ export default function AdminPage() {
     }
   };
 
+  const createInvite = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    try {
+      const res = await api<InviteRow>("/api/v1/invites", {
+        method: "POST",
+        body: JSON.stringify({
+          role_id: Number(inviteRole),
+          expires_days: Number(inviteDays) || 7,
+          note: inviteNote || null,
+        }),
+      });
+      setLastInviteUrl(res.invite_url || "");
+      setMsg("Invite link created — copy and send to the new staff member");
+      setInviteNote("");
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Invite failed");
+    }
+  };
+
+  const revokeInvite = async (id: number) => {
+    try {
+      await api(`/api/v1/invites/${id}/revoke`, { method: "POST", body: "{}" });
+      setMsg("Invite revoked");
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Revoke failed");
+    }
+  };
+
+  const copyUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
     <div>
       <PageHeader
         title={easyMode ? "Users" : "User management"}
-        subtitle="Create staff accounts and assign roles — Admin, Manager & Senior Tech only"
+        subtitle="Invite staff safely — no open public staff signup"
         actions={
           <button className="btn-primary" type="button" onClick={openNew}>
             Add user
@@ -152,9 +228,84 @@ export default function AdminPage() {
       {msg && <div className="mb-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{msg}</div>}
       {error && <div className="mb-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
+      <div className="card p-4 mb-4 space-y-3">
+        <div className="flex items-center gap-2 font-bold text-lg">
+          <Link2 size={18} /> Invite staff
+        </div>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Create a one-time link. The person chooses their username and password. Staff cannot sign up without an invite.
+        </p>
+        <form className="grid gap-3 md:grid-cols-4 items-end" onSubmit={createInvite}>
+          <div>
+            <label className="label">Role</label>
+            <select className="input" required value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+              {inviteableRoles.map((r) => (
+                <option key={r.id} value={r.id}>{r.display_name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Expires in</label>
+            <select className="input" value={inviteDays} onChange={(e) => setInviteDays(e.target.value)}>
+              <option value="1">1 day</option>
+              <option value="3">3 days</option>
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="30">30 days</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Note (optional)</label>
+            <input className="input" value={inviteNote} onChange={(e) => setInviteNote(e.target.value)} placeholder="e.g. Thabo — weekends" />
+          </div>
+          <button className="btn-primary" type="submit">Generate invite link</button>
+        </form>
+        {lastInviteUrl && (
+          <div className="flex gap-2 items-center">
+            <input className="input font-mono text-xs" readOnly value={lastInviteUrl} />
+            <button type="button" className="btn-secondary shrink-0" onClick={() => copyUrl(lastInviteUrl)}>
+              {copied ? <Check size={16} /> : <Copy size={16} />} Copy
+            </button>
+          </div>
+        )}
+        <div className="overflow-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Expires</th>
+                <th>Created by</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {invites.slice(0, 20).map((inv) => (
+                <tr key={inv.id}>
+                  <td>{inv.role_name || "—"}{inv.note ? <span className="block text-xs text-slate-400">{inv.note}</span> : null}</td>
+                  <td className="capitalize">{inv.status}</td>
+                  <td className="text-xs text-slate-500">{inv.expires_at ? new Date(inv.expires_at).toLocaleString("en-ZA") : "—"}</td>
+                  <td className="text-sm">{inv.created_by_name || "—"}</td>
+                  <td className="text-right">
+                    {inv.status === "pending" && (
+                      <button type="button" className="btn-secondary !min-h-[36px] !px-3 !text-rose-700" onClick={() => revokeInvite(inv.id)}>
+                        Revoke
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {invites.length === 0 && (
+                <tr><td colSpan={5} className="text-center text-slate-500 py-6">No invites yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="card p-4 mb-4 text-sm text-slate-600 dark:text-slate-300 space-y-1">
         <p><strong>Roles:</strong> Super Admin / Admin · Manager · Senior Tech / Supervisor · Reception · Operator · Detailer · Cashier</p>
-        <p>Wash staff (Operator / Reception / Detailer) only see Queue, Bays, Book — not Settings or Launch.</p>
+        <p>Wash staff only see Queue, Bays, Book — not Settings or Launch. Customers use <code>/portal</code>, not this page.</p>
       </div>
 
       {showForm && (
@@ -194,7 +345,7 @@ export default function AdminPage() {
             <label className="label">Role</label>
             <select className="input" required value={edit.role_id} onChange={(e) => setEdit({ ...edit, role_id: e.target.value })}>
               <option value="">Select…</option>
-              {roles.map((r) => (
+              {inviteableRoles.map((r) => (
                 <option key={r.id} value={r.id}>{r.display_name}</option>
               ))}
             </select>

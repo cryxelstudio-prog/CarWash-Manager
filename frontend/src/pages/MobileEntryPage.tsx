@@ -7,6 +7,7 @@ import { readLoginEasyPref, useEasyMode, writeLoginEasyPref } from "../hooks/use
 import { ApiError, api } from "../lib/api";
 import { bookingPrimaryLabel, vehicleDescription } from "../lib/vehicles";
 import DoneCompleteModal from "../components/DoneCompleteModal";
+import BayStatusCard, { BayBoardItem } from "../components/BayStatusCard";
 
 /** Compact staff mobile entry at /m — defaults toward Easy Mode for everyone. */
 export default function MobileEntryPage() {
@@ -20,6 +21,7 @@ export default function MobileEntryPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [bays, setBays] = useState<BayBoardItem[]>([]);
   const [toast, setToast] = useState("");
   const [doneTarget, setDoneTarget] = useState<any | null>(null);
 
@@ -28,16 +30,24 @@ export default function MobileEntryPage() {
     if (user.easy_mode !== false && !easyMode) {
       setEasyMode(true).catch(() => undefined);
     }
-    api<any>("/api/v1/bookings/queue")
-      .then((d) => {
-        const stages = d.stages || {};
-        const active: any[] = [];
-        for (const s of ["WASHING", "PRE_WASH", "INTERIOR", "DETAILING", "QUALITY_CHECK", "WAITING", "CHECK_IN", "ARRIVED", "BOOKED"]) {
-          for (const b of stages[s] || []) active.push(b);
-        }
-        setJobs(active.slice(0, 8));
-      })
-      .catch(() => undefined);
+    const load = () => {
+      api<any>("/api/v1/bookings/queue")
+        .then((d) => {
+          const stages = d.stages || {};
+          const active: any[] = [];
+          for (const s of ["WASHING", "PRE_WASH", "INTERIOR", "DETAILING", "QUALITY_CHECK", "WAITING", "CHECK_IN", "ARRIVED", "BOOKED"]) {
+            for (const b of stages[s] || []) active.push(b);
+          }
+          setJobs(active.slice(0, 8));
+        })
+        .catch(() => undefined);
+      api<any>("/api/v1/dashboard")
+        .then((d) => setBays((d.bays || []).slice(0, 4)))
+        .catch(() => undefined);
+    };
+    load();
+    const t = setInterval(load, 12000);
+    return () => clearInterval(t);
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <div className="min-h-screen grid place-items-center text-slate-500">Loading…</div>;
@@ -105,8 +115,13 @@ export default function MobileEntryPage() {
             </span>
           </label>
           <button className="btn-primary w-full !py-3.5 text-base" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+          <p className="text-center text-sm text-slate-600">
+            Customer? <Link to="/portal/register" className="underline text-sky-600 font-semibold">Sign up</Link>
+            {" · "}
+            <Link to="/portal/login" className="underline text-sky-600">Sign in</Link>
+          </p>
           <p className="text-center text-xs text-slate-500">
-            <Link to="/login" className="underline">Full login</Link>
+            <Link to="/login" className="underline">Full staff login</Link>
           </p>
         </form>
       </div>
@@ -164,6 +179,27 @@ export default function MobileEntryPage() {
         ))}
       </div>
 
+      {bays.length > 0 && (
+        <div className="mb-5 space-y-3">
+          <div className="flex items-center justify-between px-0.5">
+            <div className="text-base font-bold text-slate-700 dark:text-slate-200">Live bays</div>
+            <Link to="/wash-bays" className="text-sm font-semibold text-sky-600">Open</Link>
+          </div>
+          <div className="grid gap-3">
+            {bays.map((bay) => (
+              <BayStatusCard
+                key={bay.id}
+                bay={bay}
+                compact
+                onDone={(bookingId, ticket, vehicle) => {
+                  setDoneTarget({ id: bookingId, ticket_number: ticket, _vehicle: vehicle });
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="text-base font-bold text-slate-700 dark:text-slate-200">Cars in progress</div>
@@ -198,7 +234,7 @@ export default function MobileEntryPage() {
       <DoneCompleteModal
         open={!!doneTarget}
         ticket={doneTarget ? (doneTarget.ticket_number || doneTarget.booking_number) : null}
-        vehicle={doneTarget ? vehicleDescription(doneTarget) : null}
+        vehicle={doneTarget ? (doneTarget._vehicle || vehicleDescription(doneTarget)) : null}
         onClose={() => setDoneTarget(null)}
         onConfirm={async (message) => {
           if (!doneTarget) return;

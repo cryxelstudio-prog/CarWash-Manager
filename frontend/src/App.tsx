@@ -34,6 +34,10 @@ import BackupPage from "./pages/BackupPage";
 import HelpPage from "./pages/HelpPage";
 import LaunchPage from "./pages/LaunchPage";
 import MobileEntryPage from "./pages/MobileEntryPage";
+import PortalRegisterPage from "./pages/portal/PortalRegisterPage";
+import PortalLoginPage from "./pages/portal/PortalLoginPage";
+import PortalHomePage from "./pages/portal/PortalHomePage";
+import InviteAcceptPage from "./pages/InviteAcceptPage";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { loading, user, setupRequired } = useAuth();
@@ -52,6 +56,10 @@ export default function App() {
       <Route path="/setup" element={setupRequired ? <SetupWizard /> : <Navigate to="/" replace />} />
       <Route path="/login" element={!setupRequired && !user ? <LoginPage /> : <Navigate to="/" replace />} />
       <Route path="/m" element={<MobileEntryPage />} />
+      <Route path="/invite/:token" element={<InviteAcceptPage />} />
+      <Route path="/portal/register" element={<PortalRegisterPage />} />
+      <Route path="/portal/login" element={<PortalLoginPage />} />
+      <Route path="/portal" element={<PortalHomePage />} />
       <Route
         path="/"
         element={

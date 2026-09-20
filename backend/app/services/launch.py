@@ -126,6 +126,8 @@ def detect_access_urls(db: Session | None = None) -> dict[str, Any]:
         "invite_link": f"{primary}{login_path}",
         "mobile_link": f"{primary}{mobile_path}",
         "qr_target": f"{primary}{mobile_path}",
+        "portal_signup": f"{primary}/portal/register",
+        "portal_login": f"{primary}/portal/login",
         "openapi_url": f"{primary}/api/docs",
         "api_base_url": f"{primary}/api/v1",
     }

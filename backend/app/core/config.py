@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CARWASH_", env_file=".env", extra="ignore")
 
     app_name: str = "Car Wash Manager"
-    app_version: str = "0.8.0"
+    app_version: str = "0.9.0"
     debug: bool = False
     host: str = "0.0.0.0"
     port: int = 8787
@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     secret_key: str = ""
     session_cookie_name: str = "carwash_session"
+    portal_session_cookie_name: str = "carwash_portal_session"
     session_max_age: int = 60 * 60 * 12  # 12 hours
     csrf_header: str = "X-CSRF-Token"
 

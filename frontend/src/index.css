@@ -172,3 +172,19 @@ html.easy-mode .mode-toggle {
   min-height: var(--tap);
   @apply text-base;
 }
+
+
+/* v0.9 polish — calm premium surfaces */
+.card {
+  border-radius: 1.125rem;
+}
+.live-dot {
+  @apply inline-block h-2 w-2 rounded-full bg-emerald-500;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  animation: live-dot 1.8s ease-in-out infinite;
+}
+@keyframes live-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+html.easy-mode .live-dot { animation: none; opacity: 1; }

@@ -92,6 +92,8 @@ class BookingSource(str, enum.Enum):
     MICROSOFT_365 = "MICROSOFT_365"
     SHAREPOINT = "SHAREPOINT"
     IMPORTED = "IMPORTED"
+    PORTAL = "PORTAL"
+    CUSTOMER = "CUSTOMER"
 
 
 class PaymentMethod(str, enum.Enum):
@@ -212,10 +214,13 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     theme: Mapped[str] = mapped_column(String(16), default="system")
     # None = unset (apply role/device defaults); True/False = explicit preference
     easy_mode: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=None)
+    # v0.9.0 — portal customers share users table with role "customer"
+    customer_id: Mapped[Optional[int]] = mapped_column(ForeignKey("customers.id"), nullable=True, unique=True, index=True)
 
     role: Mapped["Role"] = relationship(back_populates="users")
     branch: Mapped[Optional["Branch"]] = relationship(foreign_keys=[branch_id])
     employee: Mapped[Optional["Employee"]] = relationship(foreign_keys=[employee_id])
+    customer: Mapped[Optional["Customer"]] = relationship(foreign_keys=[customer_id])
 
 
 # ── Organisation ───────────────────────────────────────────────────
@@ -854,3 +859,37 @@ class ApplicationSetting(Base, TimestampMixin):
     value_type: Mapped[str] = mapped_column(String(32), default="string")
     category: Mapped[str] = mapped_column(String(64), default="general")
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
+# ── Staff invites (v0.9.0) ─────────────────────────────────────────
+
+class StaffInvite(Base, TimestampMixin):
+    """One-time staff signup invite — hashed token, role, optional branch, expiry."""
+
+    __tablename__ = "staff_invites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))
+    branch_id: Mapped[Optional[int]] = mapped_column(ForeignKey("branches.id"), nullable=True)
+    created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    used_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    note: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    role: Mapped["Role"] = relationship(foreign_keys=[role_id])
+    branch: Mapped[Optional["Branch"]] = relationship(foreign_keys=[branch_id])
+    created_by: Mapped["User"] = relationship(foreign_keys=[created_by_id])
+    used_by: Mapped[Optional["User"]] = relationship(foreign_keys=[used_by_user_id])
+
+    @property
+    def status(self) -> str:
+        if self.revoked_at:
+            return "revoked"
+        if self.used_at:
+            return "used"
+        if self.expires_at and self.expires_at < utcnow():
+            return "expired"
+        return "pending"

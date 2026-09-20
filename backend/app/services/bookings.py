@@ -314,8 +314,8 @@ def move_stage(db: Session, booking_id: int, data: StageMoveIn, user_id: int | N
     booking = get_booking(db, booking.id)
     if to_stage in (WashStage.READY, WashStage.COLLECTED):
         try:
-            from app.services.payments import ensure_salary_pending_for_booking
-            ensure_salary_pending_for_booking(db, booking, user_id=user_id, username=username)
+            from app.services.payments import ensure_payment_on_wash_done
+            ensure_payment_on_wash_done(db, booking, user_id=user_id, username=username)
             booking = get_booking(db, booking.id)
         except Exception:  # noqa: BLE001
             pass

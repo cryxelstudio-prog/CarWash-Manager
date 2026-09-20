@@ -37,6 +37,7 @@ from app.models.models import (
     WashBay,
     WashStageHistory,
     BayStatus,
+    StaffInvite,
 )
 
 __all__ = [

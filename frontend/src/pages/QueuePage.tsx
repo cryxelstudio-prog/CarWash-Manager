@@ -131,11 +131,15 @@ export default function QueuePage() {
                     )}
                     {canMarkDone(b.wash_stage) && (
                       <button
-                        className={`btn-primary w-full !bg-emerald-600 hover:!bg-emerald-700 ${easyMode ? "!text-base !py-3.5" : "!py-2.5 text-sm"}`}
+                        className={`btn-primary w-full !bg-emerald-600 hover:!bg-emerald-700 shadow-md ${
+                          b.wash_bay_id || ["WASHING", "PRE_WASH", "INTERIOR", "DETAILING", "QUALITY_CHECK"].includes(b.wash_stage)
+                            ? (easyMode ? "!text-lg !py-4 ring-2 ring-emerald-300" : "!text-base !py-3.5 ring-2 ring-emerald-200")
+                            : (easyMode ? "!text-base !py-3.5" : "!py-2.5 text-sm")
+                        }`}
                         onClick={() => setDoneTarget(b)}
                       >
-                        <CheckCircle2 size={18} />
-                        {easyMode ? "Done" : "Mark complete"}
+                        <CheckCircle2 size={easyMode || b.wash_bay_id ? 22 : 18} />
+                        {easyMode ? "Done — car ready" : "Mark complete"}
                       </button>
                     )}
                     {next && needsBay(next) && !b.wash_bay_id && (

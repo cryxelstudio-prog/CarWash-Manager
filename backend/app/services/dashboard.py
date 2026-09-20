@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -50,13 +50,25 @@ def get_dashboard(db: Session, branch_id: int | None = None) -> dict:
     }
 
     def pay_sum(start: date, end: date | None = None, method: str | None = None) -> Decimal:
+        # Count PAID (use paid_at) and PENDING_SALARY (use created_at) so Done totals show
+        from sqlalchemy import or_
         q = db.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
             Payment.is_deleted.is_(False),
-            Payment.status == PaymentStatus.PAID.value,
-            func.date(Payment.paid_at) >= start,
+            Payment.status.in_([PaymentStatus.PAID.value, PaymentStatus.PENDING_SALARY.value]),
         )
+        # Date filter: paid_at for PAID, created_at for pending salary
+        date_clause = or_(
+            and_(Payment.status == PaymentStatus.PAID.value, func.date(Payment.paid_at) >= start),
+            and_(Payment.status == PaymentStatus.PENDING_SALARY.value, func.date(Payment.created_at) >= start),
+        )
+        q = q.filter(date_clause)
         if end:
-            q = q.filter(func.date(Payment.paid_at) <= end)
+            q = q.filter(
+                or_(
+                    and_(Payment.status == PaymentStatus.PAID.value, func.date(Payment.paid_at) <= end),
+                    and_(Payment.status == PaymentStatus.PENDING_SALARY.value, func.date(Payment.created_at) <= end),
+                )
+            )
         if method:
             q = q.filter(Payment.method == method)
         if branch_id:
@@ -137,6 +149,19 @@ def get_dashboard(db: Session, branch_id: int | None = None) -> dict:
         for a in recent
     ]
 
+
+    sales_completed_today = (
+        bq()
+        .filter(
+            Booking.completed_at.isnot(None),
+            func.date(Booking.completed_at) == today,
+            Booking.status != BookingStatus.CANCELLED.value,
+        )
+        .with_entities(func.coalesce(func.sum(Booking.total_amount), 0))
+        .scalar()
+    )
+    sales_completed_today = Decimal(str(sales_completed_today or 0))
+
     # revenue last 7 days
     revenue_by_day = []
     for i in range(6, -1, -1):
@@ -155,6 +180,7 @@ def get_dashboard(db: Session, branch_id: int | None = None) -> dict:
         "cancelled": stage_counts.get(WashStage.CANCELLED.value, 0),
         "no_shows": stage_counts.get(WashStage.NO_SHOW.value, 0),
         "revenue_today": pay_sum(today, today),
+        "sales_completed_today": float(sales_completed_today),
         "revenue_week": pay_sum(week_start, today),
         "revenue_month": pay_sum(month_start, today),
         "cash_today": pay_sum(today, today, PaymentMethod.CASH.value),

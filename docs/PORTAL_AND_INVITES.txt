@@ -1,0 +1,18 @@
+Car Wash Manager v0.9 — Customer portal & staff invites (short)
+
+CUSTOMER PORTAL
+  /portal/register  /portal/login  /portal
+  API: POST /api/v1/portal/register|login , GET /me , POST /bookings , GET /catalog
+  Design: User row with role "customer" + customer_id → Customer record.
+  Separate cookie: carwash_portal_session (staff cookie stays carwash_session).
+  Customers never see Admin / Settings / Launch.
+
+STAFF INVITES
+  Admin → Users → Invite staff (users.manage).
+  API: POST/GET /api/v1/invites , POST /invites/{id}/revoke ,
+       GET /invites/token/{token} , POST /invites/accept
+  Token stored hashed; one-time; expiry; revoke.
+  No open staff signup — POST /api/v1/staff/register is rejected.
+  Accept UI: /invite/{token}
+
+See docs/MANAGER_README.txt and docs/ARCHITECTURE.md.

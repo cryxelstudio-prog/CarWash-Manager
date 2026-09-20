@@ -85,8 +85,13 @@ export default function LoginPage() {
           </span>
         </label>
         <button className="btn-primary w-full" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+        <p className="text-center text-sm text-slate-600">
+          Customer? <Link to="/portal/register" className="underline text-sky-600 font-semibold">Customer sign up</Link>
+          {" · "}
+          <Link to="/portal/login" className="underline text-sky-600">Customer sign in</Link>
+        </p>
         <p className="text-center text-xs text-slate-500">
-          On a phone? <Link to="/m" className="underline text-sky-600">Mobile entry</Link>
+          Staff on a phone? <Link to="/m" className="underline text-sky-600">Mobile entry</Link>
         </p>
       </form>
     </div>

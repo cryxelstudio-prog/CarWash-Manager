@@ -481,6 +481,16 @@ export default function LaunchPage() {
               </a>
             </div>
           </div>
+          <div>
+            <label className="label">Customer portal (sign up)</label>
+            <div className="flex gap-2">
+              <input className="input font-mono text-xs" readOnly value={access.portal_signup || (access.primary_url ? access.primary_url + "/portal/register" : "/portal/register")} />
+              <a className="btn-secondary shrink-0" href={access.portal_signup || "/portal/register"} target="_blank" rel="noreferrer">
+                <ExternalLink size={16} /> Open
+              </a>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Customers book themselves — separate from staff login.</p>
+          </div>
         </div>
       </div>
 

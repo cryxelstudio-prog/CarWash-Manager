@@ -14,6 +14,8 @@ from app.api.v1 import (
     reports,
     services_api,
     vehicles,
+    portal,
+    invites,
 )
 
 api_router = APIRouter(prefix='/api/v1')
@@ -30,3 +32,5 @@ api_router.include_router(inventory.router)
 api_router.include_router(branches.router)
 api_router.include_router(reports.router)
 api_router.include_router(admin.router)
+api_router.include_router(portal.router)
+api_router.include_router(invites.router)

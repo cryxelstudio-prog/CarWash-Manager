@@ -179,6 +179,9 @@ def create_cash_up(db: Session, data: CashUpIn, user_id: int | None = None) -> C
     return cu
 
 
+
+
+
 # ── v0.7.0 salary deduction ledger ─────────────────────────────────
 
 def ensure_salary_pending_for_booking(
@@ -253,6 +256,94 @@ def ensure_salary_pending_for_booking(
     db.commit()
     db.refresh(payment)
     return payment
+
+
+
+def ensure_cash_paid_for_booking(
+    db: Session,
+    booking: Booking,
+    user_id: int | None = None,
+    username: str | None = None,
+) -> Payment | None:
+    """When wash completes with cash/card/eft intent, record a PAID payment so revenue totals."""
+    intent = (booking.payment_method_intent or "cash").strip().lower()
+    if intent in ("salary_deduction", "salary", "account"):
+        return None
+    # Already fully paid?
+    existing_paid = (
+        db.query(Payment)
+        .filter(
+            Payment.booking_id == booking.id,
+            Payment.is_deleted.is_(False),
+            Payment.status == PaymentStatus.PAID.value,
+        )
+        .first()
+    )
+    if existing_paid:
+        return existing_paid
+    method_map = {
+        "cash": PaymentMethod.CASH.value,
+        "card": PaymentMethod.CARD.value,
+        "eft": PaymentMethod.EFT.value,
+        "voucher": PaymentMethod.VOUCHER.value,
+        "other": PaymentMethod.OTHER.value,
+    }
+    method = method_map.get(intent, PaymentMethod.CASH.value)
+    from datetime import datetime
+    payment = Payment(
+        payment_number=next_number(db, Payment, "payment_number", "PAY"),
+        booking_id=booking.id,
+        customer_id=booking.customer_id,
+        branch_id=booking.branch_id,
+        amount=booking.total_amount or Decimal("0"),
+        method=method,
+        status=PaymentStatus.PAID.value,
+        notes=f"Auto-recorded on wash Done ({intent or 'cash'})",
+        received_by_id=user_id,
+        paid_at=datetime.utcnow(),
+    )
+    if payment.amount <= 0:
+        return None
+    db.add(payment)
+    booking.payment_status = PaymentStatus.PAID.value
+    inv = ensure_invoice_for_booking(db, booking)
+    payment.invoice_id = inv.id
+    inv.amount_paid = payment.amount
+    inv.status = "PAID"
+    audit(
+        db,
+        action="PAYMENT_AUTO_DONE",
+        user_id=user_id,
+        username=username,
+        entity_type="payment",
+        entity_id=None,
+        details=f"Auto PAID on Done for {booking.booking_number}",
+    )
+    activity(
+        db,
+        action="payment",
+        summary=f"Payment recorded on Done for {booking.booking_number}: {payment.amount}",
+        user_id=user_id,
+        actor_name=username,
+        entity_type="booking",
+        entity_id=booking.id,
+    )
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
+def ensure_payment_on_wash_done(
+    db: Session,
+    booking: Booking,
+    user_id: int | None = None,
+    username: str | None = None,
+) -> Payment | None:
+    """Create the right payment row when a wash is marked READY/Done."""
+    intent = (booking.payment_method_intent or "cash").strip().lower()
+    if intent in ("salary_deduction", "salary"):
+        return ensure_salary_pending_for_booking(db, booking, user_id=user_id, username=username)
+    return ensure_cash_paid_for_booking(db, booking, user_id=user_id, username=username)
 
 
 def mark_salary_payments_paid(

@@ -9,13 +9,14 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models import Role, RolePermission, User
-from app.security.sessions import decode_session_token
+from app.security.sessions import decode_portal_session_token, decode_session_token
 
 
 class AuthContext:
-    def __init__(self, user: User, csrf: str):
+    def __init__(self, user: User, csrf: str, *, portal: bool = False):
         self.user = user
         self.csrf = csrf
+        self.portal = portal
         self._perm_codes: set[str] | None = None
 
     @property
@@ -36,6 +37,23 @@ class AuthContext:
             return True
         return code in self.permissions
 
+    @property
+    def is_customer(self) -> bool:
+        return bool(self.user.customer_id) or (self.user.role and self.user.role.name == "customer")
+
+
+def _load_user(db: Session, user_id: int) -> User | None:
+    return (
+        db.query(User)
+        .options(
+            joinedload(User.role)
+            .joinedload(Role.permissions)
+            .joinedload(RolePermission.permission)
+        )
+        .filter(User.id == user_id, User.is_active.is_(True), User.is_deleted.is_(False))
+        .first()
+    )
+
 
 def get_current_user_optional(
     request: Request,
@@ -48,17 +66,11 @@ def get_current_user_optional(
     data = decode_session_token(token)
     if not data:
         return None
-    user = (
-        db.query(User)
-        .options(
-            joinedload(User.role)
-            .joinedload(Role.permissions)
-            .joinedload(RolePermission.permission)
-        )
-        .filter(User.id == data["uid"], User.is_active.is_(True), User.is_deleted.is_(False))
-        .first()
-    )
+    user = _load_user(db, data["uid"])
     if not user:
+        return None
+    # Portal customers must use the portal session cookie — never staff APIs
+    if user.customer_id or (user.role and user.role.name == "customer"):
         return None
     return AuthContext(user=user, csrf=data.get("csrf", ""))
 
@@ -93,6 +105,47 @@ def require_permission(*codes: str) -> Callable:
     return _dep
 
 
+def get_portal_user_optional(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> AuthContext | None:
+    settings = get_settings()
+    token = request.cookies.get(settings.portal_session_cookie_name)
+    if not token:
+        return None
+    data = decode_portal_session_token(token)
+    if not data:
+        return None
+    user = _load_user(db, data["uid"])
+    if not user:
+        return None
+    if not (user.customer_id or (user.role and user.role.name == "customer")):
+        return None
+    return AuthContext(user=user, csrf=data.get("csrf", ""), portal=True)
+
+
+def get_portal_user(ctx: AuthContext | None = Depends(get_portal_user_optional)) -> AuthContext:
+    if not ctx:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return ctx
+
+
+def require_portal_csrf(
+    request: Request,
+    ctx: AuthContext = Depends(get_portal_user),
+    x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> AuthContext:
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return ctx
+    token = x_csrf_token or request.headers.get("X-CSRF-Token")
+    if not token or token != ctx.csrf:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+    return ctx
+
+
 CurrentUser = Annotated[AuthContext, Depends(get_current_user)]
 OptionalUser = Annotated[AuthContext | None, Depends(get_current_user_optional)]
 CSRFUser = Annotated[AuthContext, Depends(require_csrf)]
+PortalUser = Annotated[AuthContext, Depends(get_portal_user)]
+PortalCSRF = Annotated[AuthContext, Depends(require_portal_csrf)]
+OptionalPortal = Annotated[AuthContext | None, Depends(get_portal_user_optional)]

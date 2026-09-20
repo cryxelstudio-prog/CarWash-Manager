@@ -113,6 +113,8 @@ ROLE_DEFS = [
         "dashboard.view", "reports.view", "reports.export",
     ]),
     ("custom", "Custom", True, []),
+    # Portal self-signup — no staff permissions; never listed in staff Users
+    ("customer", "Customer", True, []),
 ]
 
 INTEGRATIONS = [
@@ -148,7 +150,7 @@ DEFAULT_SETTINGS = [
     ("setup.completed", "false", "boolean", "system", "First-run completed"),
     ("loyalty.points_per_rand", "1", "number", "loyalty", "Points earned per R1"),
     ("hosting.cors_origins_extra", "", "string", "hosting", "Extra CORS origins (comma-separated) for Power Apps / LAN"),
-    ("app.version", "0.8.0", "string", "system", "Displayed app version"),
+    ("app.version", "0.9.0", "string", "system", "Displayed app version"),
     ("app.login_background_url", "", "string", "branding", "Optional login background image URL"),
     ("app.theme_default", "system", "string", "branding", "Default theme: light/dark/system"),
     ("launch.public_base_url", "", "string", "launch", "Public / reverse-proxy base URL for QR and invites"),
@@ -260,8 +262,17 @@ def ensure_bootstrap(db: Session) -> None:
 
 def setup_required(db: Session) -> bool:
     from app.models import User
+    from sqlalchemy.orm import joinedload
 
-    return db.query(User).filter(User.is_deleted.is_(False)).count() == 0
+    # Portal customers do not satisfy first-run setup
+    staff = (
+        db.query(User)
+        .options(joinedload(User.role))
+        .filter(User.is_deleted.is_(False), User.customer_id.is_(None))
+        .all()
+    )
+    staff = [u for u in staff if not (u.role and u.role.name == "customer")]
+    return len(staff) == 0
 
 
 def get_setting(db: Session, key: str, default: str | None = None) -> str | None:

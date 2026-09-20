@@ -2,7 +2,7 @@
 
 Local-first car wash operations software for South Africa (ZAR / Africa/Johannesburg).
 
-**Version:** 0.8.0
+**Version:** 0.9.0
 
 Works with **zero** Microsoft 365 / SharePoint / Power Apps / payment-gateway configuration.
 
@@ -31,7 +31,7 @@ Works with **zero** Microsoft 365 / SharePoint / Power Apps / payment-gateway co
 
 ## Features (implemented)
 
-Done→customer ready email, bay colour states, role-gated Settings, Cash / salary-deduction payment intent + payroll export, local calendar + optional Outlook owner alerts, ticket-first vehicle ID (no plates by default), Easy / Simple Mode, Launch hub (QR staff access, Power Apps / SharePoint wizards), customisable bays & branding, Dashboard KPIs, customers, vehicles, services, packages, bookings, live wash queue (stage moves), calendar views, employees, attendance, payments, invoices/receipts (PDF), cash-up, inventory, suppliers, expenses, reports (CSV/Excel), branches, wash bays, notifications, branding/settings, integrations centre (all Not Configured), admin users, audit log, activity timeline, diagnostics, backup/restore, global search, first-run wizard, RBAC.
+Customer self-signup portal + controlled staff invites, live bay board on Home/mobile, Done→customer ready email, bay colour states, role-gated Settings, Cash / salary-deduction payment intent + payroll export, local calendar + optional Outlook owner alerts, ticket-first vehicle ID (no plates by default), Easy / Simple Mode, Launch hub (QR staff access, Power Apps / SharePoint wizards), customisable bays & branding, Dashboard KPIs, customers, vehicles, services, packages, bookings, live wash queue (stage moves), calendar views, employees, attendance, payments, invoices/receipts (PDF), cash-up, inventory, suppliers, expenses, reports (CSV/Excel), branches, wash bays, notifications, branding/settings, integrations centre (all Not Configured), admin users, audit log, activity timeline, diagnostics, backup/restore, global search, first-run wizard, RBAC.
 
 ## Integrations
 
@@ -54,6 +54,8 @@ M365 auth/calendar, SharePoint, Power Apps, email/SMS/WhatsApp/Teams, card payme
 - OpenAPI: `/api/docs`
 - Health: `/health`
 
-## Docs
+## Docs (start here)
 
-See `docs/` for installation, admin, user, security, backup, API and architecture guides.
+**Managers:** read **[`docs/MANAGER_README.txt`](docs/MANAGER_README.txt)** first — where the app lives, hosting options, setup checklist, and FAQ in plain English.
+
+Also: `docs/LAUNCH_GUIDE.txt`, `docs/HOSTING_OPTIONS.txt`, `docs/PORTAL_AND_INVITES.txt`, installation / admin / user / security / backup / API / architecture guides under `docs/`.

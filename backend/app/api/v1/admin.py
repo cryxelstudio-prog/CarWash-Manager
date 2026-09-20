@@ -331,11 +331,13 @@ def list_users(db: Session = Depends(get_db), ctx: AuthContext = Depends(require
     rows = (
         db.query(User)
         .options(joinedload(User.role))
-        .filter(User.is_deleted.is_(False))
+        .filter(User.is_deleted.is_(False), User.customer_id.is_(None))
         .order_by(User.username)
         .all()
     )
-    return {"items": [_user_row(u) for u in rows]}
+    # Exclude portal customer role accounts
+    items = [_user_row(u) for u in rows if not (u.role and u.role.name == "customer")]
+    return {"items": items}
 
 
 @router.get("/roles")
@@ -352,7 +354,7 @@ def list_roles(db: Session = Depends(get_db), ctx: AuthContext = Depends(require
                 "is_system": r.is_system,
             }
             for r in rows
-            if r.name != "custom"
+            if r.name not in ("custom", "customer")
         ]
     }
 
@@ -367,6 +369,8 @@ def create_user(payload: UserCreateIn, db: Session = Depends(get_db), ctx: AuthC
     role = db.get(Role, payload.role_id)
     if not role:
         bad_request("Role not found")
+    if role.name == "customer":
+        bad_request("Customer accounts are created via the portal — not Admin Users")
     # Only super_admin/owner may create another super-admin-capable role
     if role.name in ("super_admin",) and not (ctx.user.is_super_admin or (ctx.user.role and ctx.user.role.name in ("super_admin", "owner"))):
         bad_request("Only Super Admin / Owner can assign Super Admin")
@@ -446,6 +450,8 @@ def staff_access(
 ):
     """LAN + invite helpers for phone QR / link login."""
     access = detect_access_urls(db)
+    access.setdefault("portal_signup", f"{access.get('primary_url', '')}/portal/register")
+    access.setdefault("portal_login", f"{access.get('primary_url', '')}/portal/login")
     # Prefer request host when available (matches what the admin browser used)
     try:
         base = str(request.base_url).rstrip("/")
@@ -454,6 +460,8 @@ def staff_access(
             access["invite_link"] = f"{base}/login"
             access["mobile_link"] = f"{base}/m"
             access["qr_target"] = f"{base}/m"
+            access["portal_signup"] = f"{base}/portal/register"
+            access["portal_login"] = f"{base}/portal/login"
         else:
             access["browser_url"] = base
     except Exception:  # noqa: BLE001

@@ -462,6 +462,7 @@ class DashboardOut(BaseModel):
     cancelled: int = 0
     no_shows: int = 0
     revenue_today: Decimal = Decimal("0")
+    sales_completed_today: Decimal = Decimal("0")
     revenue_week: Decimal = Decimal("0")
     revenue_month: Decimal = Decimal("0")
     cash_today: Decimal = Decimal("0")

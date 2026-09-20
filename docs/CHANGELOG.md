@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0 — 2026-09-20
+- **Customer portal** — self-signup at `/portal/register`, login `/portal/login`, home `/portal` (book + history). Mobile-friendly Easy Mode style. Linked from staff login / Launch. Separate portal session cookie; role `customer` + `customer_id`.
+- **Staff invites** — Admin → Users → Invite staff (role, expiry, one-time hashed token). Accept at `/invite/{token}`. List pending/used/revoked; revoke. No open public staff signup (`/api/v1/staff/register` rejected).
+- **Live bays** — Dashboard Home and mobile `/m` feature large live Bay cards (green / amber / blue / grey) with ticket + vehicle description; auto-refresh ~12s.
+- **UI polish** — calmer cards, clearer hierarchy on Dashboard, Queue, Bays, AppShell; stronger Done on busy bay jobs.
+- **Manager guide** — `docs/MANAGER_README.txt` (where apps live, hosting options, configure checklist, exhaustive FAQ); linked from README and in-app Help for managers. `docs/PORTAL_AND_INVITES.txt`.
+- **Revenue on Done** — cash/card/EFT finishes auto-create a PAID payment so Dashboard `revenue_today` increases; salary still creates PENDING_SALARY (counted in today’s takings).
+- Version bump to 0.9.0.
+
+
 ## 0.8.0 — 2026-09-20
 - **Mobile polish** — `/m`, Easy Mode, Queue, Quick Book and Bays: cleaner cards, professional header with logo, soft empty states (“No cars waiting — nice and quiet”), large touch targets kept.
 - **Done / Mark complete** — primary Done on Queue cards, Bay board and mobile jobs. Optional message to car owner → confirm “Yes, car is ready” → stage READY + wash complete.

@@ -169,6 +169,39 @@ def ensure_schema_patches() -> None:
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_vehicles_registration ON vehicles (registration)"))
                 conn.execute(text("PRAGMA foreign_keys=ON"))
 
+        # v0.9.0 — portal customers + staff invites
+        if "users" in tables:
+            ucols = _column_names(conn, "users")
+            if "customer_id" not in ucols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN customer_id INTEGER"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_customer_id ON users (customer_id)"))
+
+        if "staff_invites" not in tables:
+            conn.execute(text(
+                """
+                CREATE TABLE IF NOT EXISTS staff_invites (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    token_hash VARCHAR(128) NOT NULL,
+                    role_id INTEGER NOT NULL,
+                    branch_id INTEGER,
+                    created_by_id INTEGER NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    used_at DATETIME,
+                    used_by_user_id INTEGER,
+                    revoked_at DATETIME,
+                    note VARCHAR(255),
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    FOREIGN KEY(role_id) REFERENCES roles (id),
+                    FOREIGN KEY(branch_id) REFERENCES branches (id),
+                    FOREIGN KEY(created_by_id) REFERENCES users (id),
+                    FOREIGN KEY(used_by_user_id) REFERENCES users (id)
+                )
+                """
+            ))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_staff_invites_token_hash ON staff_invites (token_hash)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_staff_invites_expires_at ON staff_invites (expires_at)"))
+
 
 def init_db() -> None:
     """Create tables if needed (Alembic preferred; fallback for smoke)."""

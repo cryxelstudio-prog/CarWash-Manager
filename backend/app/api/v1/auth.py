@@ -117,6 +117,8 @@ def login(payload: LoginIn, request: Request, response: Response, db: Session = 
         audit(db, action="LOGIN_FAILED", username=payload.username, details="Invalid credentials", ip_address=request.client.host if request.client else None)
         db.commit()
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    if user.customer_id or (user.role and user.role.name == "customer"):
+        raise HTTPException(status_code=403, detail="Customer accounts sign in at /portal/login")
     user.last_login_at = datetime.utcnow()
     _apply_easy_mode_on_login(user, payload.easy_mode)
     csrf = new_csrf_token()
