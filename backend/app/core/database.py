@@ -85,6 +85,20 @@ def ensure_schema_patches() -> None:
                         {"tn": f"T-{i:04d}", "id": bid},
                     )
 
+        # v0.6.0 — owner alert outbound tracking on notifications
+        if "notifications" in tables:
+            ncols = _column_names(conn, "notifications")
+            if "event_type" not in ncols:
+                conn.execute(text("ALTER TABLE notifications ADD COLUMN event_type VARCHAR(64)"))
+            if "booking_id" not in ncols:
+                conn.execute(text("ALTER TABLE notifications ADD COLUMN booking_id INTEGER"))
+            if "outbound_status" not in ncols:
+                conn.execute(text("ALTER TABLE notifications ADD COLUMN outbound_status VARCHAR(32)"))
+            if "outbound_channel" not in ncols:
+                conn.execute(text("ALTER TABLE notifications ADD COLUMN outbound_channel VARCHAR(32)"))
+            if "outbound_error" not in ncols:
+                conn.execute(text("ALTER TABLE notifications ADD COLUMN outbound_error TEXT"))
+
 
 def init_db() -> None:
     """Create tables if needed (Alembic preferred; fallback for smoke)."""

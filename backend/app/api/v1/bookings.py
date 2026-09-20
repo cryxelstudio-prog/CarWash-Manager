@@ -41,6 +41,7 @@ def list_bookings(
             joinedload(Booking.package),
             joinedload(Booking.branch),
             joinedload(Booking.assigned_employee),
+            joinedload(Booking.wash_bay),
         )
         .filter(Booking.is_deleted.is_(False))
     )
@@ -100,6 +101,7 @@ def wash_queue(
             joinedload(Booking.package),
             joinedload(Booking.assigned_employee),
             joinedload(Booking.branch),
+            joinedload(Booking.wash_bay),
         )
         .filter(
             Booking.is_deleted.is_(False),
@@ -114,6 +116,30 @@ def wash_queue(
     for b in rows:
         by_stage.setdefault(b.wash_stage, []).append(serialize_booking(b))
     return {"date": d.isoformat(), "stages": by_stage, "items": [serialize_booking(b) for b in rows]}
+
+
+
+@router.get("/{booking_id}/ics")
+def download_ics(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("bookings.view", "bookings.manage", "queue.manage")),
+):
+    """Download .ics so the owner can open the booking in Outlook manually — no Azure required."""
+    from fastapi.responses import Response
+    from app.services.ics import booking_to_ics
+
+    b = get_booking(db, booking_id)
+    if not b:
+        not_found()
+    content = booking_to_ics(b)
+    ticket = b.ticket_number or b.booking_number or str(b.id)
+    filename = f"wash-{ticket}.ics".replace(" ", "-")
+    return Response(
+        content=content,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/{booking_id}")

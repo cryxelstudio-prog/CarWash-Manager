@@ -1,5 +1,10 @@
 Microsoft 365 Setup (OPTIONAL)
 ==============================
 Not required to run the product.
-When ready: register an Entra app, add credentials via Integrations (future), enable M365 Auth / Calendar adapters.
-Until configured, status remains Not Configured and local auth continues to work.
+
+Easiest path: open the app → Launch → Outlook Calendar wizard.
+Short guide: docs/OUTLOOK_SETUP.txt
+
+When ready for Graph: register an Entra app (Mail.Send, optional Calendars.ReadWrite),
+enter Tenant ID / Client ID / Client Secret + owner mailbox on Launch.
+Until configured, status remains Not Configured and local calendar + auth continue to work.

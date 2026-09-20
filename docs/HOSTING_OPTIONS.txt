@@ -1,10 +1,10 @@
 Car Wash Manager — Hosting Options
 ====================================
-Version 0.3.0
+Version 0.6.0
 
 This app is local-first. Microsoft 365 / SharePoint / Power Apps are optional.
 
-In-app wizards: sidebar → Launch (QR, LAN, Power Apps, SharePoint, custom URL).
+In-app wizards: sidebar → Launch (QR, LAN, Outlook Calendar, owner alerts, Power Apps, SharePoint, custom URL).
 See also docs/LAUNCH_GUIDE.txt.
 
 1) Local standalone (default)
@@ -50,3 +50,8 @@ OpenAPI / docs
   Interactive docs:  /api/docs
   ReDoc:             /api/redoc
   OpenAPI JSON:      /api/openapi.json
+
+6) Outlook / Microsoft 365 (optional)
+   - Launch → Outlook Calendar wizard
+   - See docs/OUTLOOK_SETUP.txt
+   - Never required for core offline operation

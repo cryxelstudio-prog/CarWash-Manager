@@ -11,6 +11,7 @@ from app.api.v1.helpers import bad_request, not_found
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.integrations import base as integrations
+from app.integrations.outlook import get_calendar_service, get_notification_service, outlook_config, test_outlook_connection
 from app.models import Activity, ApplicationSetting, AuditLog, Booking, Customer, Integration, Notification, User, Vehicle
 from app.schemas.entities import IntegrationOut, NotificationOut, SettingIn
 from app.security.deps import AuthContext, CSRFUser, require_permission
@@ -56,12 +57,15 @@ def branding(db: Session = Depends(get_db)):
 def list_integrations(db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("integrations.view", "admin.manage"))):
     rows = db.query(Integration).order_by(Integration.category, Integration.name).all()
     # enrich with live adapter status
+    notif_status = get_notification_service(db).status()
+    cal_status = get_calendar_service(db).status()
     adapter_map = {
         "m365_auth": integrations.microsoft_auth.status(),
-        "m365_calendar": integrations.microsoft_calendar.status(),
+        "m365_calendar": cal_status,
+        "outlook_notifications": notif_status,
         "sharepoint": integrations.sharepoint.status(),
         "power_apps": integrations.power_platform.status(),
-        "email": integrations.notifications.status(),
+        "email": notif_status,
         "sms": integrations.notifications.status(),
         "whatsapp": integrations.notifications.status(),
         "teams": integrations.notifications.status(),
@@ -349,6 +353,36 @@ def put_launch_platform(
         return save_launch_platform(db, platform, payload.fields or {})
     except ValueError as e:
         bad_request(str(e))
+
+
+
+class OutlookTestIn(BaseModel):
+    send_test: bool = False
+
+
+@router.post("/launch/outlook/test")
+def test_outlook(
+    payload: OutlookTestIn | None = None,
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage")),
+):
+    """Safe Outlook / SMTP connection test. Never crashes the API."""
+    send_test = bool(payload.send_test) if payload else False
+    try:
+        result = test_outlook_connection(db, send_test=send_test)
+    except Exception as exc:  # noqa: BLE001
+        result = {"ok": False, "status": "FAILED", "message": f"Test failed safely: {exc}"}
+    status = launch_status(db)
+    return {"test": result, "launch": status}
+
+
+@router.get("/owner-alerts")
+def get_owner_alerts(
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage", "dashboard.view")),
+):
+    from app.services.owner_alerts import owner_alert_settings
+    return {"settings": owner_alert_settings(db), "outlook": outlook_config(db)}
 
 
 ALLOWED_LOGO = {".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"}

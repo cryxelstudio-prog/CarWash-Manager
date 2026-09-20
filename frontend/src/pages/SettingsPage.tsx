@@ -252,13 +252,22 @@ export default function SettingsPage() {
         )}
       </div>
 
+      <div className="card p-4 md:p-5 space-y-3 mb-4">
+        <h3 className="font-bold">Owner alerts & Outlook</h3>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Configure who gets notified and optional Outlook email on the <strong>Launch</strong> page
+          (<em>Outlook Calendar</em> + <em>Owner alerts</em> cards). Local calendar always works without Microsoft 365.
+        </p>
+        <p className="text-xs text-slate-500">Guide: <code className="text-xs">docs/OUTLOOK_SETUP.txt</code></p>
+      </div>
+
       <div className="card p-4 md:p-5 space-y-2">
         <h3 className="font-bold">Hosting tip</h3>
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Use the <strong>Launch</strong> sidebar page for QR staff access, LAN, Power Apps and SharePoint wizards.
+          Use the <strong>Launch</strong> sidebar page for QR staff access, LAN, Outlook, Power Apps and SharePoint wizards.
           Guides: <code className="text-xs">docs/LAUNCH_GUIDE.txt</code>, <code className="text-xs">docs/HOSTING_OPTIONS.txt</code>.
         </p>
-        <p className="text-xs text-slate-500">App version 0.5.0 · Default currency ZAR · Africa/Johannesburg</p>
+        <p className="text-xs text-slate-500">App version 0.6.0 · Default currency ZAR · Africa/Johannesburg</p>
       </div>
     </div>
   );

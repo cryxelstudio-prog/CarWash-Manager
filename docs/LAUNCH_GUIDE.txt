@@ -1,6 +1,6 @@
 Car Wash Manager — Launch Guide
 ================================
-Version 0.3.0
+Version 0.6.0
 
 Use the in-app **Launch** sidebar page for wizards. This file is the short reference.
 
@@ -45,5 +45,18 @@ Use the in-app **Launch** sidebar page for wizards. This file is the short refer
 - Set public base URL (https://carwash.example.com)
 - QR and invite links prefer this over LAN IP
 - Reverse-proxy to uvicorn :8787; keep ./data ./uploads ./backups ./logs
+
+
+7) Outlook Calendar & owner alerts (optional)
+---------------------------------------------
+- Launch → Outlook Calendar (highlighted card)
+- Toggle Connect Outlook calendar
+- Owner Outlook email + optional sync / email-when-ready
+- Mode: Microsoft 365 (Graph) OR Simple email (SMTP) — only relevant fields shown
+- Big Save + Test connection / Send test alert
+- Local calendar remains primary; Outlook is best-effort
+- Owner alerts card: name, email, which events (car ready, completed, …)
+- Full steps: docs/OUTLOOK_SETUP.txt
+- Download .ics from any booking without configuring Outlook
 
 See also: docs/HOSTING_OPTIONS.txt, docs/POWER_APPS_INTEGRATION.txt, docs/SHAREPOINT_SETUP.txt

@@ -405,6 +405,11 @@ class NotificationOut(BaseModel):
     is_read: bool
     link: str | None = None
     created_at: datetime | None = None
+    event_type: str | None = None
+    booking_id: int | None = None
+    outbound_status: str | None = None
+    outbound_channel: str | None = None
+    outbound_error: str | None = None
 
 
 class SettingIn(BaseModel):

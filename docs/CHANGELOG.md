@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 — 2026-09-20
+- **Local calendar authoritative** — Day/Week/Month/Agenda shows ticket + vehicle description; click for details; colour by status/bay; branch filter; **Add to calendar (.ics)** without Outlook.
+- **Owner alerts** — Launch + Settings: owner name/email and toggles (car ready / completed / booking / cancelled / no-show). Stage → READY/COLLECTED (and create/cancel/no-show) creates in-app notification and best-effort outbound email.
+- **Offline-first** — if Outlook/Graph/SMTP fails, booking still succeeds; Notifications show pending/failed outbound.
+- **Launch → Outlook Calendar** wizard (non-technical): Connect toggle, owner email, optional sync, email-when-ready, Graph vs Simple SMTP fields, Save + Test connection / Send test alert, friendly status.
+- Integrations: `outlook_notifications` + calendar sync stub via Microsoft Graph; SMTP fallback; null when disabled.
+- Easy Mode: confirm “Tell owner car is ready?” when moving to READY.
+- Docs: OUTLOOK_SETUP.txt; LAUNCH/HOSTING updated.
+- Version bump to 0.6.0.
+
 ## 0.5.0 — 2026-09-20
 - **Boss rule:** registration plates are **not** the primary staff identifier (hidden by default).
 - **Wash ticket / claim number** auto-generated on booking (`T-0001`…); shown large on queue cards, bay board, receipts.

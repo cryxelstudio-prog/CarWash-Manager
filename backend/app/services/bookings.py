@@ -94,6 +94,7 @@ def serialize_booking(b: Booking) -> dict:
         "package_name": b.package.name if b.package else None,
         "branch_name": b.branch.name if b.branch else None,
         "assignee_name": b.assigned_employee.full_name if b.assigned_employee else None,
+        "bay_name": (b.wash_bay.name if b.wash_bay else None),
     }
 
 
@@ -184,6 +185,12 @@ def create_booking(db: Session, data: BookingIn, user_id: int | None = None, use
     if booking.wash_bay_id:
         from app.services.bays import sync_bay_occupancy
         sync_bay_occupancy(db, booking.wash_bay_id)
+    booking = get_booking(db, booking.id)
+    try:
+        from app.services.owner_alerts import maybe_alert_booking_created
+        maybe_alert_booking_created(db, booking, user_id=user_id)
+    except Exception:  # noqa: BLE001
+        pass
     return get_booking(db, booking.id)
 
 
@@ -197,6 +204,7 @@ def get_booking(db: Session, booking_id: int) -> Booking | None:
             joinedload(Booking.package),
             joinedload(Booking.branch),
             joinedload(Booking.assigned_employee),
+            joinedload(Booking.wash_bay),
         )
         .filter(Booking.id == booking_id, Booking.is_deleted.is_(False))
         .first()
@@ -264,6 +272,12 @@ def move_stage(db: Session, booking_id: int, data: StageMoveIn, user_id: int | N
     db.commit()
     from app.services.bays import sync_bay_occupancy
     sync_bay_occupancy(db, booking.wash_bay_id)
+    booking = get_booking(db, booking.id)
+    try:
+        from app.services.owner_alerts import maybe_alert_for_stage
+        maybe_alert_for_stage(db, booking, to_stage.value, user_id=user_id)
+    except Exception:  # noqa: BLE001
+        pass
     return get_booking(db, booking.id)
 
 

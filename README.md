@@ -2,7 +2,7 @@
 
 Local-first car wash operations software for South Africa (ZAR / Africa/Johannesburg).
 
-**Version:** 0.5.0
+**Version:** 0.6.0
 
 Works with **zero** Microsoft 365 / SharePoint / Power Apps / payment-gateway configuration.
 
@@ -31,7 +31,7 @@ Works with **zero** Microsoft 365 / SharePoint / Power Apps / payment-gateway co
 
 ## Features (implemented)
 
-Ticket-first vehicle ID (no plates by default), Easy / Simple Mode, Launch hub (QR staff access, Power Apps / SharePoint wizards), customisable bays & branding, Dashboard KPIs, customers, vehicles, services, packages, bookings, live wash queue (stage moves), calendar views, employees, attendance, payments, invoices/receipts (PDF), cash-up, inventory, suppliers, expenses, reports (CSV/Excel), branches, wash bays, notifications, branding/settings, integrations centre (all Not Configured), admin users, audit log, activity timeline, diagnostics, backup/restore, global search, first-run wizard, RBAC.
+Local calendar + optional Outlook owner alerts, ticket-first vehicle ID (no plates by default), Easy / Simple Mode, Launch hub (QR staff access, Power Apps / SharePoint wizards), customisable bays & branding, Dashboard KPIs, customers, vehicles, services, packages, bookings, live wash queue (stage moves), calendar views, employees, attendance, payments, invoices/receipts (PDF), cash-up, inventory, suppliers, expenses, reports (CSV/Excel), branches, wash bays, notifications, branding/settings, integrations centre (all Not Configured), admin users, audit log, activity timeline, diagnostics, backup/restore, global search, first-run wizard, RBAC.
 
 ## Integrations
 

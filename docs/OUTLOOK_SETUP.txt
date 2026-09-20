@@ -1,0 +1,61 @@
+Car Wash Manager — Outlook / Microsoft 365 setup (OPTIONAL)
+============================================================
+Version 0.6.0
+
+You do NOT need Outlook or Azure to run the car wash app.
+The in-app Calendar (Day / Week / Month / Agenda) is always the source of truth.
+
+What Outlook gives you
+----------------------
+- Email the owner when a car is ready / completed (and other toggles)
+- Optional best-effort copy of bookings onto an Outlook calendar
+- Always: download a .ics file from a booking (“Add to calendar”) with zero config
+
+Where to configure (easiest)
+----------------------------
+1. Open the app → sidebar → Launch
+2. Open the highlighted card: Outlook Calendar
+3. Toggle “Connect Outlook calendar”
+4. Enter Owner Outlook email
+5. Optional toggles:
+     - Sync bookings to Outlook calendar
+     - Email me when a car is ready / complete
+6. Pick how to send email:
+     A) Microsoft 365 (Graph)  — company Microsoft account
+     B) Simple email (SMTP)    — Gmail / Outlook.com / any SMTP
+7. Fill only the fields for that choice
+8. Press Save, then Test connection (or Send test alert)
+
+Also set Owner alerts (name + which events) on the neighbouring Launch card.
+
+Option A — Microsoft 365 (Graph)
+--------------------------------
+Ask IT for an Entra (Azure AD) app registration with:
+  - Application (client) ID
+  - Directory (tenant) ID
+  - Client secret
+Application permissions typically needed:
+  - Mail.Send
+  - Calendars.ReadWrite  (only if you turn on sync)
+Grant admin consent. Use the owner mailbox UPN (email) in the wizard.
+
+Option B — Simple email (SMTP)
+------------------------------
+Examples:
+  Outlook.com:  smtp.office365.com  port 587
+  Gmail:        smtp.gmail.com      port 587  (use an App Password)
+Enter From address, username, password/app password. No Azure needed.
+Calendar sync to Outlook requires Graph (Option A); SMTP is email-only.
+Use “Add to calendar (.ics)” on any booking to open it in Outlook manually.
+
+If something fails
+------------------
+- Booking and local notifications still succeed (offline-first)
+- Failed outbound email shows as “Email failed” on Notifications
+- Test connection never crashes the app — status becomes Connected / Failed / Not configured
+
+ICS without Outlook config
+--------------------------
+Calendar → click a booking → Add to calendar (.ics)
+
+See also: docs/LAUNCH_GUIDE.txt, docs/HOSTING_OPTIONS.txt, Launch page in the app.

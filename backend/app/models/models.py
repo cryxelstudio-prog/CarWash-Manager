@@ -751,6 +751,12 @@ class Notification(Base, TimestampMixin):
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     link: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     meta: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # v0.6.0 — owner alerts / outbound Outlook status
+    event_type: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    booking_id: Mapped[Optional[int]] = mapped_column(ForeignKey("bookings.id"), nullable=True, index=True)
+    outbound_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)  # PENDING/SENT/FAILED/SKIPPED
+    outbound_channel: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    outbound_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
 
 class AuditLog(Base):

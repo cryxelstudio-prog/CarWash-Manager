@@ -30,6 +30,10 @@ export default function QueuePage() {
   }, []);
 
   const move = async (id: number, to_stage: string, wash_bay_id?: number | null) => {
+    if (easyMode && to_stage === "READY") {
+      const ok = window.confirm("Tell owner car is ready?\n\nYes — mark ready (owner gets an alert).\nCancel — stay on this stage.");
+      if (!ok) return;
+    }
     const body: any = { to_stage };
     if (wash_bay_id) body.wash_bay_id = wash_bay_id;
     await api(`/api/v1/bookings/${id}/stage`, { method: "POST", body: JSON.stringify(body) });
