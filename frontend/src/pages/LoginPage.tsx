@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useBranding } from "../hooks/useBranding";
+import { readLoginEasyPref, writeLoginEasyPref } from "../hooks/useEasyMode";
 import { ApiError } from "../lib/api";
 
 export default function LoginPage() {
@@ -9,6 +10,7 @@ export default function LoginPage() {
   const { appName, logoUrl, accent, branding } = useBranding();
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
+  const [easyMode, setEasyMode] = useState(() => readLoginEasyPref(true));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const bg = branding["app.login_background_url"];
@@ -18,7 +20,8 @@ export default function LoginPage() {
     setBusy(true);
     setError("");
     try {
-      await login(username, password);
+      writeLoginEasyPref(easyMode);
+      await login(username, password, easyMode);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Login failed");
     } finally {
@@ -64,6 +67,23 @@ export default function LoginPage() {
           <label className="label">Password</label>
           <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         </div>
+        <label className="flex items-start gap-3 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-4 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            className="mt-1 h-5 w-5 accent-sky-600"
+            checked={easyMode}
+            onChange={(e) => {
+              setEasyMode(e.target.checked);
+              writeLoginEasyPref(e.target.checked);
+            }}
+          />
+          <span>
+            <span className="block text-base font-bold text-slate-800 dark:text-slate-100">Simple mode (larger text)</span>
+            <span className="block text-sm text-slate-500 mt-0.5">
+              Bigger buttons and clearer words. Available for every role — including managers. You can switch anytime after sign-in.
+            </span>
+          </span>
+        </label>
         <button className="btn-primary w-full" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
         <p className="text-center text-xs text-slate-500">
           On a phone? <Link to="/m" className="underline text-sky-600">Mobile entry</Link>

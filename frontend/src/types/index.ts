@@ -9,6 +9,8 @@ export interface User {
   branch_id?: number | null;
   is_super_admin: boolean;
   theme?: string;
+  /** null/undefined = unset; true = Easy/Simple; false = Full */
+  easy_mode?: boolean | null;
   permissions: string[];
 }
 

@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/ui/PageHeader";
+import Modal from "../components/ui/Modal";
+import { useEasyMode } from "../hooks/useEasyMode";
 import { api, ApiError, formatMoney } from "../lib/api";
 
 const VEHICLE_TYPES = [
@@ -22,6 +24,7 @@ const SLOTS = [
 
 export default function QuickBookPage() {
   const navigate = useNavigate();
+  const { easyMode } = useEasyMode();
   const today = new Date().toISOString().slice(0, 10);
   const [branches, setBranches] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
@@ -31,6 +34,7 @@ export default function QuickBookPage() {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [form, setForm] = useState<any>({
     branch_id: "",
@@ -76,8 +80,7 @@ export default function QuickBookPage() {
 
   const set = (key: string, value: any) => setForm((f: any) => ({ ...f, [key]: value }));
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const doBook = async () => {
     setBusy(true);
     setError("");
     setOk("");
@@ -100,24 +103,42 @@ export default function QuickBookPage() {
         payload.customer_phone = form.customer_phone;
       }
       const b = await api<any>("/api/v1/bookings/quick", { method: "POST", body: JSON.stringify(payload) });
-      setOk(`Booked ${b.booking_number}`);
+      setConfirmOpen(false);
+      setOk(easyMode ? `Booked — ${b.booking_number}` : `Booked ${b.booking_number}`);
       setTimeout(() => navigate("/queue"), 600);
     } catch (err) {
+      setConfirmOpen(false);
       setError(err instanceof ApiError ? err.detail : "Booking failed");
     } finally {
       setBusy(false);
     }
   };
 
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (easyMode) {
+      setConfirmOpen(true);
+      return;
+    }
+    await doBook();
+  };
+
+  const summaryName =
+    mode === "new"
+      ? form.customer_name || "New customer"
+      : (customers.find((c) => String(c.id) === String(form.customer_id))?.full_name || "Customer");
+
   return (
     <div className="max-w-xl mx-auto">
       <PageHeader
-        title="Quick Book"
-        subtitle="A few taps — perfect for phone"
+        title={easyMode ? "Book a wash" : "Quick Book"}
+        subtitle={easyMode ? "Fill in the details, then confirm" : "A few taps — perfect for phone"}
         actions={
-          <button className="btn-secondary" type="button" onClick={() => navigate("/bookings")}>
-            Advanced
-          </button>
+          !easyMode ? (
+            <button className="btn-secondary" type="button" onClick={() => navigate("/bookings")}>
+              Advanced
+            </button>
+          ) : undefined
         }
       />
       {error && <div className="mb-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
@@ -126,7 +147,7 @@ export default function QuickBookPage() {
       <form className="card p-4 md:p-5 space-y-4" onSubmit={submit}>
         {branches.length > 1 && (
           <div>
-            <label className="label">Branch</label>
+            <label className="label">{easyMode ? "Which branch?" : "Branch"}</label>
             <select className="input" required value={form.branch_id} onChange={(e) => set("branch_id", e.target.value)}>
               <option value="">Select…</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -136,31 +157,33 @@ export default function QuickBookPage() {
         {branches.length === 1 && <input type="hidden" value={form.branch_id} />}
 
         <div>
-          <label className="label">Vehicle type</label>
+          <label className="label">{easyMode ? "Vehicle type" : "Vehicle type"}</label>
           <select className="input" required value={form.vehicle_type} onChange={(e) => set("vehicle_type", e.target.value)}>
             {VEHICLE_TYPES.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="label">Service</label>
+          <label className="label">{easyMode ? "Which wash?" : "Service"}</label>
           <select className="input" value={form.service_id} onChange={(e) => set("service_id", e.target.value)}>
-            <option value="">Select service…</option>
+            <option value="">{easyMode ? "Choose a wash…" : "Select service…"}</option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>{s.name} — {formatMoney(s.base_price)}</option>
             ))}
           </select>
         </div>
 
-        <div>
-          <label className="label">Package (optional)</label>
-          <select className="input" value={form.package_id} onChange={(e) => set("package_id", e.target.value)}>
-            <option value="">None</option>
-            {packages.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} — {formatMoney(p.price)}</option>
-            ))}
-          </select>
-        </div>
+        {!easyMode && (
+          <div>
+            <label className="label">Package (optional)</label>
+            <select className="input" value={form.package_id} onChange={(e) => set("package_id", e.target.value)}>
+              <option value="">None</option>
+              {packages.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} — {formatMoney(p.price)}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -168,16 +191,16 @@ export default function QuickBookPage() {
             <input className="input" type="date" required value={form.scheduled_date} onChange={(e) => set("scheduled_date", e.target.value)} />
           </div>
           <div>
-            <label className="label">Time slot</label>
+            <label className="label">{easyMode ? "Time" : "Time slot"}</label>
             <select className="input" value={form.scheduled_time} onChange={(e) => set("scheduled_time", e.target.value)}>
               {SLOTS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="flex gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
-          <button type="button" className={`flex-1 rounded-lg py-2 text-sm font-semibold ${mode === "new" ? "bg-white dark:bg-slate-900 shadow" : ""}`} onClick={() => setMode("new")}>New customer</button>
-          <button type="button" className={`flex-1 rounded-lg py-2 text-sm font-semibold ${mode === "existing" ? "bg-white dark:bg-slate-900 shadow" : ""}`} onClick={() => setMode("existing")}>Existing</button>
+        <div className={`flex gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 ${easyMode ? "p-1.5" : ""}`}>
+          <button type="button" className={`flex-1 rounded-lg ${easyMode ? "py-3 text-base" : "py-2 text-sm"} font-semibold ${mode === "new" ? "bg-white dark:bg-slate-900 shadow" : ""}`} onClick={() => setMode("new")}>New customer</button>
+          <button type="button" className={`flex-1 rounded-lg ${easyMode ? "py-3 text-base" : "py-2 text-sm"} font-semibold ${mode === "existing" ? "bg-white dark:bg-slate-900 shadow" : ""}`} onClick={() => setMode("existing")}>Existing</button>
         </div>
 
         {mode === "new" ? (
@@ -204,14 +227,14 @@ export default function QuickBookPage() {
         )}
 
         <div>
-          <label className="label">Registration (optional)</label>
+          <label className="label">{easyMode ? "Number plate (optional)" : "Registration (optional)"}</label>
           <input className="input uppercase" value={form.registration} onChange={(e) => set("registration", e.target.value.toUpperCase())} placeholder="CA 123-456" />
         </div>
 
         <div>
-          <label className="label">Bay preference</label>
+          <label className="label">{easyMode ? "Bay (optional)" : "Bay preference"}</label>
           <select className="input" value={form.wash_bay_id} onChange={(e) => set("wash_bay_id", e.target.value)}>
-            <option value="">Any</option>
+            <option value="">{easyMode ? "Any free bay" : "Any"}</option>
             {branchBays.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
@@ -219,16 +242,35 @@ export default function QuickBookPage() {
         </div>
 
         {estimate != null && (
-          <div className="rounded-xl bg-sky-50 dark:bg-sky-950/40 px-4 py-3 flex justify-between text-sm">
-            <span className="text-slate-600 dark:text-slate-300">Estimate (ex. extras)</span>
+          <div className={`rounded-xl bg-sky-50 dark:bg-sky-950/40 px-4 py-3 flex justify-between ${easyMode ? "text-base" : "text-sm"}`}>
+            <span className="text-slate-600 dark:text-slate-300">{easyMode ? "Price (about)" : "Estimate (ex. extras)"}</span>
             <span className="font-bold">{formatMoney(estimate)}</span>
           </div>
         )}
 
         <button className="btn-primary w-full !py-3.5 text-base" disabled={busy || (!form.service_id && !form.package_id)}>
-          {busy ? "Booking…" : "Confirm booking"}
+          {busy ? "Booking…" : easyMode ? "Book a wash" : "Confirm booking"}
         </button>
       </form>
+
+      <Modal open={confirmOpen} title="Confirm booking" onClose={() => !busy && setConfirmOpen(false)}>
+        <div className="space-y-4 text-base">
+          <p>Book a wash for <strong>{summaryName}</strong>?</p>
+          <ul className="space-y-1 text-slate-600 dark:text-slate-300">
+            <li>{selectedService?.name || selectedPackage?.name || "Service"}</li>
+            <li>{form.scheduled_date} at {form.scheduled_time}</li>
+            {estimate != null && <li>About {formatMoney(estimate)}</li>}
+          </ul>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button type="button" className="btn-primary flex-1" disabled={busy} onClick={() => doBook()}>
+              {busy ? "Booking…" : "Yes, book it"}
+            </button>
+            <button type="button" className="btn-secondary flex-1" disabled={busy} onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

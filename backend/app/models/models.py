@@ -188,6 +188,8 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
     theme: Mapped[str] = mapped_column(String(16), default="system")
+    # None = unset (apply role/device defaults); True/False = explicit preference
+    easy_mode: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=None)
 
     role: Mapped["Role"] = relationship(back_populates="users")
     branch: Mapped[Optional["Branch"]] = relationship(foreign_keys=[branch_id])

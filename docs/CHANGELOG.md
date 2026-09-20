@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 — 2026-09-20
+- **Easy / Simple Mode** for accessibility (elderly-friendly and clear for all staff):
+  - Larger text (~18–28px), huge tap targets (~60px), calmer spacing, optional high contrast, reduced motion.
+  - Simpler nav: Home, Book a wash, Queue, Bays, Help.
+  - Managers in Easy Mode still get large buttons for Prices, Today's money, Staff, Settings — not a stripped toy UI.
+  - Available to **every role** (Owner / Manager / Admin / Reception / Operator). No role is locked to Full Mode.
+  - Login checkbox: "Simple mode (larger text)"; preference stored per user (`easy_mode`) with localStorage backup.
+  - Obvious header / sidebar **Full mode** ↔ **Simple mode** toggle.
+  - Mobile `/m` leans Easy by default.
+  - Clear booking confirmations: "Yes, book it" / "Cancel".
+  - Bay labels: "Bay free" / "Bay busy".
+  - Help page tips for Simple Mode.
+- API: `PATCH /api/v1/auth/me` (`easy_mode`, `theme`); login accepts optional `easy_mode`.
+- Version bump to 0.4.0.
+
 ## 0.3.0 — 2026-09-20
 - Staff phone access: scannable QR + copyable invite/mobile links (LAN hostname & IP helpers) on Launch.
 - Launch hub: Local, LAN, Power Apps, SharePoint, Self-hosted wizards with persisted settings.

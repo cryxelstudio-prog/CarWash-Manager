@@ -7,6 +7,8 @@ from pydantic import BaseModel, EmailStr, Field
 class LoginIn(BaseModel):
     username: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=1, max_length=128)
+    # Optional: persist Simple mode preference at login (all roles)
+    easy_mode: bool | None = None
 
 
 class UserOut(BaseModel):
@@ -22,7 +24,14 @@ class UserOut(BaseModel):
     branch_id: int | None = None
     is_super_admin: bool = False
     theme: str = "system"
+    easy_mode: bool | None = None
     permissions: list[str] = []
+
+
+class MeUpdateIn(BaseModel):
+    """Per-user preferences — available to every role."""
+    easy_mode: bool | None = None
+    theme: str | None = Field(default=None, max_length=16)
 
 
 class SessionOut(BaseModel):

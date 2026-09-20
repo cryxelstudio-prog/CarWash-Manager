@@ -7,10 +7,12 @@ interface AuthCtx {
   setupRequired: boolean;
   user: User | null;
   refresh: () => Promise<void>;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, easyMode?: boolean | null) => Promise<void>;
   logout: () => Promise<void>;
   completeSetup: (payload: any) => Promise<void>;
   has: (perm: string) => boolean;
+  /** Optimistic local update after preference PATCH */
+  patchUser: (partial: Partial<User>) => void;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -32,10 +34,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refresh().catch(() => setLoading(false));
   }, [refresh]);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, easyMode?: boolean | null) => {
+    const body: Record<string, unknown> = { username, password };
+    if (easyMode !== undefined && easyMode !== null) {
+      body.easy_mode = easyMode;
+    }
     const session = await api<Session>("/api/v1/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify(body),
     });
     setCsrfToken(session.csrf_token);
     setUser(session.user);
@@ -67,8 +73,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return user.permissions.includes(perm);
   };
 
+  const patchUser = (partial: Partial<User>) => {
+    setUser((u) => (u ? { ...u, ...partial } : u));
+  };
+
   const value = useMemo(
-    () => ({ loading, setupRequired, user, refresh, login, logout, completeSetup, has }),
+    () => ({ loading, setupRequired, user, refresh, login, logout, completeSetup, has, patchUser }),
     [loading, setupRequired, user, refresh]
   );
 

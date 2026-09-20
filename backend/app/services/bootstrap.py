@@ -126,7 +126,7 @@ DEFAULT_SETTINGS = [
     ("setup.completed", "false", "boolean", "system", "First-run completed"),
     ("loyalty.points_per_rand", "1", "number", "loyalty", "Points earned per R1"),
     ("hosting.cors_origins_extra", "", "string", "hosting", "Extra CORS origins (comma-separated) for Power Apps / LAN"),
-    ("app.version", "0.3.0", "string", "system", "Displayed app version"),
+    ("app.version", "0.4.0", "string", "system", "Displayed app version"),
     ("app.login_background_url", "", "string", "branding", "Optional login background image URL"),
     ("app.theme_default", "system", "string", "branding", "Default theme: light/dark/system"),
     ("launch.public_base_url", "", "string", "launch", "Public / reverse-proxy base URL for QR and invites"),

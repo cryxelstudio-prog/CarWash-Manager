@@ -77,3 +77,98 @@ body {
 ::selection {
   background: color-mix(in srgb, var(--brand-accent) 35%, white);
 }
+
+/* ── Easy / Simple Mode (v0.4.0) — calm, large, professional ── */
+html.easy-mode {
+  --tap: 60px;
+  font-size: 18px;
+}
+html.easy-mode body {
+  letter-spacing: 0;
+  line-height: 1.55;
+}
+html.easy-mode .btn-primary,
+html.easy-mode .btn-secondary,
+html.easy-mode .btn-danger {
+  @apply text-base font-bold rounded-2xl px-5;
+  min-height: var(--tap);
+}
+html.easy-mode .input {
+  @apply text-base rounded-2xl px-4;
+  min-height: var(--tap);
+}
+html.easy-mode .label {
+  @apply text-sm font-bold normal-case tracking-normal text-slate-700 dark:text-slate-200 mb-2;
+}
+html.easy-mode .card {
+  @apply rounded-3xl;
+}
+html.easy-mode .table {
+  @apply text-base;
+}
+html.easy-mode .table th {
+  @apply text-sm normal-case tracking-normal py-4;
+}
+html.easy-mode .table td {
+  @apply py-4;
+}
+html.easy-mode .badge {
+  @apply text-sm px-3 py-1;
+}
+
+/* Larger spacing */
+html.easy-mode .easy-gap {
+  gap: 1rem;
+}
+html.easy-mode main {
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+
+/* Reduced motion when Easy Mode is on */
+html.easy-mode *,
+html.easy-mode *::before,
+html.easy-mode *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+/* Keep bay status readable without pulse distraction */
+html.easy-mode .bay-pulse {
+  animation: none !important;
+}
+
+/* High contrast option (pairs with Easy Mode) */
+html.easy-mode.high-contrast {
+  --brand-accent: #005a9e;
+  --brand-accent-hover: #003d6b;
+}
+html.easy-mode.high-contrast body {
+  @apply bg-white text-black dark:bg-black dark:text-white;
+}
+html.easy-mode.high-contrast .card {
+  @apply border-2 border-slate-900 dark:border-white;
+  box-shadow: none;
+}
+html.easy-mode.high-contrast .btn-primary {
+  background: #005a9e;
+  color: #fff;
+  border: 2px solid #003d6b;
+}
+html.easy-mode.high-contrast .btn-secondary {
+  @apply border-2 border-slate-900 dark:border-white font-bold;
+}
+html.easy-mode.high-contrast .input {
+  @apply border-2 border-slate-900 dark:border-white;
+}
+
+/* Obvious mode toggle control */
+.mode-toggle {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl border-2 px-4 py-3 font-bold transition;
+  min-height: 52px;
+}
+html.easy-mode .mode-toggle {
+  min-height: var(--tap);
+  @apply text-base;
+}

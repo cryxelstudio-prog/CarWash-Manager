@@ -2,9 +2,11 @@ import { FormEvent, useEffect, useState } from "react";
 import PageHeader from "../components/ui/PageHeader";
 import { api, ApiError } from "../lib/api";
 import { applyAccent, useBranding } from "../hooks/useBranding";
+import { useEasyMode } from "../hooks/useEasyMode";
 
 export default function SettingsPage() {
   const { refresh } = useBranding();
+  const { easyMode, setEasyMode, highContrast, setHighContrast } = useEasyMode();
   const [branding, setBranding] = useState<any>({});
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -170,13 +172,33 @@ export default function SettingsPage() {
         <div className="md:col-span-2"><button className="btn-primary">Save settings</button></div>
       </form>
 
+      <div className="card p-4 md:p-5 space-y-3 mb-4">
+        <h3 className="font-bold">Simple / Easy mode</h3>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Larger text and buttons for comfortable daily use. Available to <strong>every role</strong> (including Owner and Manager). Preference is saved on your user account.
+        </p>
+        <button
+          type="button"
+          className="mode-toggle border-2 border-slate-300 w-full sm:w-auto"
+          onClick={() => setEasyMode(!easyMode)}
+        >
+          {easyMode ? "Switch to Full mode" : "Switch to Simple mode"}
+        </button>
+        {easyMode && (
+          <label className="flex items-center gap-3 text-sm cursor-pointer">
+            <input type="checkbox" className="h-4 w-4" checked={highContrast} onChange={(e) => setHighContrast(e.target.checked)} />
+            High contrast
+          </label>
+        )}
+      </div>
+
       <div className="card p-4 md:p-5 space-y-2">
         <h3 className="font-bold">Hosting tip</h3>
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Use the <strong>Launch</strong> sidebar page for QR staff access, LAN, Power Apps and SharePoint wizards.
           Guides: <code className="text-xs">docs/LAUNCH_GUIDE.txt</code>, <code className="text-xs">docs/HOSTING_OPTIONS.txt</code>.
         </p>
-        <p className="text-xs text-slate-500">App version 0.3.0 · Default currency ZAR · Africa/Johannesburg</p>
+        <p className="text-xs text-slate-500">App version 0.4.0 · Default currency ZAR · Africa/Johannesburg</p>
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models import Role, RolePermission, User
-from app.schemas.auth import LoginIn, SessionOut, SetupCompleteIn, UserOut
+from app.schemas.auth import LoginIn, MeUpdateIn, SessionOut, SetupCompleteIn, UserOut
 from app.schemas.common import MessageOut
 from app.security.deps import CSRFUser, OptionalUser, get_current_user_optional
 from app.security.passwords import verify_password
@@ -19,6 +19,16 @@ from app.services.bootstrap import setup_required
 from app.services.setup import complete_setup
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _role_key(user: User) -> str:
+    return (user.role.name if user.role else "").lower()
+
+
+
+def _resolve_easy_mode(user: User) -> bool | None:
+    """Return stored preference (may be None = unset)."""
+    return user.easy_mode
 
 
 def _user_out(user: User) -> UserOut:
@@ -38,8 +48,22 @@ def _user_out(user: User) -> UserOut:
         branch_id=user.branch_id,
         is_super_admin=user.is_super_admin,
         theme=user.theme,
+        easy_mode=_resolve_easy_mode(user),
         permissions=perms,
     )
+
+
+def _apply_easy_mode_on_login(user: User, requested: bool | None) -> None:
+    """Persist easy_mode from login checkbox, or seed staff defaults once."""
+    if requested is not None:
+        user.easy_mode = bool(requested)
+        return
+    if user.easy_mode is None:
+        role = _role_key(user)
+        # Only auto-seed Easy for frontline roles. Managers/owners stay None
+        # until they explicitly choose — never lock them into Full Mode.
+        if role in ("reception", "operator", "washer", "staff"):
+            user.easy_mode = True
 
 
 @router.get("/status")
@@ -94,6 +118,7 @@ def login(payload: LoginIn, request: Request, response: Response, db: Session = 
         db.commit()
         raise HTTPException(status_code=401, detail="Invalid username or password")
     user.last_login_at = datetime.utcnow()
+    _apply_easy_mode_on_login(user, payload.easy_mode)
     csrf = new_csrf_token()
     token = create_session_token(user.id, csrf)
     settings = get_settings()
@@ -121,3 +146,26 @@ def logout(response: Response, ctx: OptionalUser = None):
 @router.get("/me", response_model=SessionOut)
 def me(ctx: CSRFUser):
     return SessionOut(user=_user_out(ctx.user), csrf_token=ctx.csrf)
+
+
+@router.patch("/me", response_model=SessionOut)
+def update_me(payload: MeUpdateIn, ctx: CSRFUser, db: Session = Depends(get_db)):
+    """Update per-user preferences (easy_mode, theme). Available to every role."""
+    user = (
+        db.query(User)
+        .options(joinedload(User.role).joinedload(Role.permissions).joinedload(RolePermission.permission))
+        .filter(User.id == ctx.user.id)
+        .first()
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if payload.easy_mode is not None:
+        user.easy_mode = bool(payload.easy_mode)
+    if payload.theme is not None:
+        theme = payload.theme.strip().lower()
+        if theme not in ("light", "dark", "system"):
+            raise HTTPException(status_code=400, detail="theme must be light, dark, or system")
+        user.theme = theme
+    db.commit()
+    db.refresh(user)
+    return SessionOut(user=_user_out(user), csrf_token=ctx.csrf)

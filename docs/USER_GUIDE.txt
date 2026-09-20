@@ -8,3 +8,20 @@ Typical day:
 5. Record payment (Cash/Card/EFT).
 6. Download receipt PDF.
 7. End-of-day cash-up and reports.
+
+Simple / Easy Mode (v0.4.0)
+---------------------------
+Use Simple mode for larger text and buttons. It is available to EVERY role
+(including Owner and Manager — managers may also prefer larger controls).
+
+How to turn it on:
+- On the login screen, tick "Simple mode (larger text)".
+- Or use the large "Simple mode" / "Full mode" button in the header or sidebar.
+- On phones (/m), Simple mode is recommended by default.
+
+In Simple mode you see: Home, Book a wash, Queue, Bays, Help.
+Managers also get big buttons for: Prices, Today's money, Staff, Settings.
+Bay status uses plain words: "Bay free" / "Bay busy".
+When booking, confirm with "Yes, book it" or "Cancel".
+
+Your choice is saved on your user account and remembered next time.
