@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Invoice, Payment
 from app.services.bootstrap import get_setting
+from app.utils.vehicles import vehicle_description
 from app.services.payments import ensure_invoice_for_booking
 from app.models import Booking
 
@@ -40,11 +41,17 @@ def build_receipt_pdf(db: Session, payment_id: int) -> bytes:
         ["Reference:", payment.reference or "-"],
     ]
     if booking:
+        show_reg = (get_setting(db, "vehicles.show_registration", "false") or "false").lower() in ("1", "true", "yes")
+        veh_label = vehicle_description(booking.vehicle) or ""
+        if show_reg and booking.vehicle and booking.vehicle.registration:
+            veh_label = f"{veh_label} ({booking.vehicle.registration})".strip()
         meta.extend(
             [
+                ["Ticket:", booking.ticket_number or booking.booking_number],
                 ["Booking:", booking.booking_number],
                 ["Customer:", booking.customer.full_name if booking.customer else ""],
-                ["Vehicle:", booking.vehicle.registration if booking.vehicle else ""],
+                ["Phone:", booking.customer_phone or (booking.customer.phone if booking.customer else "")],
+                ["Vehicle:", veh_label],
                 ["Service:", booking.service.name if booking.service else (booking.package.name if booking.package else "")],
             ]
         )

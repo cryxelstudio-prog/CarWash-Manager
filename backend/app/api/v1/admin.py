@@ -47,6 +47,7 @@ def branding(db: Session = Depends(get_db)):
         "app.login_background_url", "app.theme_default",
         "locale.currency", "locale.currency_symbol", "locale.timezone", "locale.date_format", "locale.tax_rate",
         "hosting.cors_origins_extra", "app.version",
+        "vehicles.show_registration", "vehicles.require_registration", "vehicles.hide_registration",
     ]
     return {k: get_setting(db, k) for k in keys}
 
@@ -128,21 +129,102 @@ def mark_read(notification_id: int, db: Session = Depends(get_db), ctx: AuthCont
 
 @router.get("/search")
 def global_search(q: str, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("dashboard.view", "customers.view", "bookings.view"))):
+    """Find by ticket, phone, name, vehicle description — plate optional."""
+    from app.utils.vehicles import vehicle_description
+    from sqlalchemy.orm import joinedload
+
     if not q or len(q.strip()) < 2:
         return {"customers": [], "vehicles": [], "bookings": []}
-    like = f"%{q.strip()}%"
+    term = q.strip()
+    like = f"%{term}%"
     customers = (
         db.query(Customer)
-        .filter(Customer.is_deleted.is_(False), (Customer.first_name.ilike(like)) | (Customer.last_name.ilike(like)) | (Customer.phone.ilike(like)) | (Customer.customer_number.ilike(like)))
+        .filter(
+            Customer.is_deleted.is_(False),
+            (Customer.first_name.ilike(like))
+            | (Customer.last_name.ilike(like))
+            | (Customer.phone.ilike(like))
+            | (Customer.customer_number.ilike(like)),
+        )
         .limit(10)
         .all()
     )
-    vehicles = db.query(Vehicle).filter(Vehicle.is_deleted.is_(False), Vehicle.registration.ilike(like)).limit(10).all()
-    bookings = db.query(Booking).filter(Booking.is_deleted.is_(False), Booking.booking_number.ilike(like)).limit(10).all()
+    vehicles = (
+        db.query(Vehicle)
+        .filter(
+            Vehicle.is_deleted.is_(False),
+            (Vehicle.registration.ilike(like))
+            | (Vehicle.make.ilike(like))
+            | (Vehicle.model.ilike(like))
+            | (Vehicle.colour.ilike(like)),
+        )
+        .limit(10)
+        .all()
+    )
+    bookings = (
+        db.query(Booking)
+        .options(joinedload(Booking.customer), joinedload(Booking.vehicle))
+        .filter(
+            Booking.is_deleted.is_(False),
+            (Booking.booking_number.ilike(like))
+            | (Booking.ticket_number.ilike(like))
+            | (Booking.customer_phone.ilike(like)),
+        )
+        .limit(10)
+        .all()
+    )
+    # Also match bookings via customer name / vehicle description
+    if len(bookings) < 10:
+        extra = (
+            db.query(Booking)
+            .options(joinedload(Booking.customer), joinedload(Booking.vehicle))
+            .join(Customer, Booking.customer_id == Customer.id)
+            .outerjoin(Vehicle, Booking.vehicle_id == Vehicle.id)
+            .filter(
+                Booking.is_deleted.is_(False),
+                (Customer.first_name.ilike(like))
+                | (Customer.last_name.ilike(like))
+                | (Customer.phone.ilike(like))
+                | (Vehicle.colour.ilike(like))
+                | (Vehicle.make.ilike(like))
+                | (Vehicle.model.ilike(like)),
+            )
+            .limit(10)
+            .all()
+        )
+        seen = {b.id for b in bookings}
+        for b in extra:
+            if b.id not in seen:
+                bookings.append(b)
+                seen.add(b.id)
+            if len(bookings) >= 10:
+                break
+
+    show_reg = (get_setting(db, "vehicles.show_registration", "false") or "false").lower() in ("1", "true", "yes")
+    veh_labels = []
+    for v in vehicles:
+        desc = vehicle_description(v) or "Vehicle"
+        label = desc
+        if show_reg and v.registration:
+            label = f"{desc} ({v.registration})"
+        veh_labels.append({"id": v.id, "label": label, "customer_id": v.customer_id})
+
+    booking_labels = []
+    for b in bookings:
+        desc = vehicle_description(b.vehicle) if b.vehicle else None
+        name = b.customer.full_name if b.customer else ""
+        ticket = b.ticket_number or b.booking_number
+        parts = [ticket]
+        if name:
+            parts.append(name)
+        if desc:
+            parts.append(desc)
+        booking_labels.append({"id": b.id, "label": " · ".join(parts), "stage": b.wash_stage, "ticket_number": b.ticket_number})
+
     return {
         "customers": [{"id": c.id, "label": f"{c.full_name} ({c.phone})", "number": c.customer_number} for c in customers],
-        "vehicles": [{"id": v.id, "label": f"{v.registration} — {v.make or ''} {v.model or ''}", "customer_id": v.customer_id} for v in vehicles],
-        "bookings": [{"id": b.id, "label": b.booking_number, "stage": b.wash_stage} for b in bookings],
+        "vehicles": veh_labels,
+        "bookings": booking_labels,
     }
 
 
@@ -325,6 +407,9 @@ def update_branding(
         "locale.date_format",
         "locale.tax_rate",
         "hosting.cors_origins_extra",
+        "vehicles.show_registration",
+        "vehicles.require_registration",
+        "vehicles.hide_registration",
     }
     for key, value in (payload or {}).items():
         if key in allowed:

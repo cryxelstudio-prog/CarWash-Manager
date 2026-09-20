@@ -126,7 +126,7 @@ DEFAULT_SETTINGS = [
     ("setup.completed", "false", "boolean", "system", "First-run completed"),
     ("loyalty.points_per_rand", "1", "number", "loyalty", "Points earned per R1"),
     ("hosting.cors_origins_extra", "", "string", "hosting", "Extra CORS origins (comma-separated) for Power Apps / LAN"),
-    ("app.version", "0.4.0", "string", "system", "Displayed app version"),
+    ("app.version", "0.5.0", "string", "system", "Displayed app version"),
     ("app.login_background_url", "", "string", "branding", "Optional login background image URL"),
     ("app.theme_default", "system", "string", "branding", "Default theme: light/dark/system"),
     ("launch.public_base_url", "", "string", "launch", "Public / reverse-proxy base URL for QR and invites"),
@@ -140,6 +140,9 @@ DEFAULT_SETTINGS = [
     ("sharepoint.list_name", "", "string", "sharepoint", "Optional list name"),
     ("sharepoint.library_name", "", "string", "sharepoint", "Optional library name"),
     ("sharepoint.doc_library", "", "string", "sharepoint", "Document library for invoices/photos"),
+    ("vehicles.show_registration", "false", "boolean", "vehicles", "Show registration plates in staff UI (default OFF)"),
+    ("vehicles.hide_registration", "true", "boolean", "vehicles", "Hide registration by default (inverse of show)"),
+    ("vehicles.require_registration", "false", "boolean", "vehicles", "Require registration on vehicles / check-in"),
 ]
 
 

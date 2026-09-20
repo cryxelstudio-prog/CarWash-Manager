@@ -2,8 +2,14 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/ui/PageHeader";
 import { api, STAGE_LABELS, WASH_STAGES, formatMoney } from "../lib/api";
+import { useEasyMode } from "../hooks/useEasyMode";
+import { useBranding } from "../hooks/useBranding";
+import { bookingPrimaryLabel, isShowRegistration, vehicleDescription } from "../lib/vehicles";
 
 export default function QueuePage() {
+  const { easyMode } = useEasyMode();
+  const { branding } = useBranding();
+  const showReg = isShowRegistration(branding);
   const [stages, setStages] = useState<Record<string, any[]>>({});
   const [bays, setBays] = useState<any[]>([]);
   const [error, setError] = useState("");
@@ -41,11 +47,11 @@ export default function QueuePage() {
   return (
     <div>
       <PageHeader
-        title="Live Wash Queue"
-        subtitle="Move vehicles through stages — assign Bay 1 or Bay 2 when washing"
+        title={easyMode ? "Wash queue" : "Live Wash Queue"}
+        subtitle={easyMode ? "Move cars by ticket number" : "Ticket + car description — assign bays when washing"}
         actions={
           <>
-            <Link className="btn-primary" to="/quick-book">Quick Book</Link>
+            <Link className="btn-primary" to="/quick-book">{easyMode ? "Book a wash" : "Quick Book"}</Link>
             <button className="btn-secondary" onClick={() => load()}>Refresh</button>
           </>
         }
@@ -63,8 +69,18 @@ export default function QueuePage() {
                 const next = nextStage(b.wash_stage);
                 return (
                   <div key={b.id} className="card p-3 space-y-2">
-                    <div className="font-semibold text-sm">{b.vehicle_registration}</div>
-                    <div className="text-xs text-slate-500">{b.customer_name}</div>
+                    <div className={`font-extrabold tracking-tight ${easyMode ? "text-2xl" : "text-xl"}`}>
+                      {bookingPrimaryLabel(b)}
+                    </div>
+                    <div className={`font-semibold ${easyMode ? "text-base" : "text-sm"}`}>
+                      {vehicleDescription(b)}
+                    </div>
+                    {showReg && b.vehicle_registration && (
+                      <div className="text-[11px] uppercase text-slate-400">{b.vehicle_registration}</div>
+                    )}
+                    <div className="text-xs text-slate-500">
+                      {b.customer_name}{b.customer_phone ? ` · ${b.customer_phone}` : ""}
+                    </div>
                     <div className="text-xs">{b.service_name || b.package_name}</div>
                     <div className="text-xs">{formatMoney(b.total_amount)} · {b.payment_status}</div>
                     {b.wash_bay_id && (
@@ -87,7 +103,7 @@ export default function QueuePage() {
                     )}
                     {next && !(needsBay(next) && !b.wash_bay_id) && (
                       <button className="btn-primary w-full !py-2 text-xs" onClick={() => move(b.id, next, b.wash_bay_id)}>
-                        Move to {STAGE_LABELS[next]}
+                        {easyMode ? `Next: ${STAGE_LABELS[next]}` : `Move to ${STAGE_LABELS[next]}`}
                       </button>
                     )}
                   </div>

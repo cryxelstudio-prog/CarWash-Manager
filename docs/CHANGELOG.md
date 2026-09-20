@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0 — 2026-09-20
+- **Boss rule:** registration plates are **not** the primary staff identifier (hidden by default).
+- **Wash ticket / claim number** auto-generated on booking (`T-0001`…); shown large on queue cards, bay board, receipts.
+- **Customer name + phone** remain the primary lookup; search also matches ticket and vehicle description.
+- **Vehicle description** (colour + make + model) required — displayed as e.g. "White Polo".
+- Registration optional, behind Quick Book "Advanced details"; Settings toggles:
+  - **Show registration plates** (default OFF)
+  - **Require registration** (default OFF / `require_registration=false`, `hide_registration=true`)
+- Updated: vehicles model/API, Quick Book, Bookings, Queue, Bay cards, global search, Easy Mode labels, receipts/PDFs, demo data.
+- Optional check-in inspection photos remain supported.
+- Version bump to 0.5.0.
+
+
 ## 0.4.0 — 2026-09-20
 - **Easy / Simple Mode** for accessibility (elderly-friendly and clear for all staff):
   - Larger text (~18–28px), huge tap targets (~60px), calmer spacing, optional high contrast, reduced motion.

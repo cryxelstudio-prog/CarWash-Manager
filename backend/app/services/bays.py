@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models import Booking, Branch, Employee, WashBay
 from app.models.models import BayStatus, BookingStatus, WashStage
+from app.utils.vehicles import vehicle_description
 
 BUSY_STAGES = {
     WashStage.PRE_WASH.value,
@@ -229,11 +230,18 @@ def bay_board(db: Session, branch_id: int | None = None, active_only: bool = Tru
             staff = current.assigned_employee.full_name
         vehicle = None
         if current:
+            veh = current.vehicle
             vehicle = {
                 "booking_id": current.id,
                 "booking_number": current.booking_number,
-                "registration": current.vehicle.registration if current.vehicle else None,
+                "ticket_number": current.ticket_number,
+                "registration": veh.registration if veh else None,
+                "description": vehicle_description(veh),
+                "colour": veh.colour if veh else None,
+                "make": veh.make if veh else None,
+                "model": veh.model if veh else None,
                 "customer": current.customer.full_name if current.customer else None,
+                "customer_phone": current.customer_phone or (current.customer.phone if current.customer else None),
                 "service": (current.service.name if current.service else None)
                 or (current.package.name if current.package else None),
                 "stage": current.wash_stage,

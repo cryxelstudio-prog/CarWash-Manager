@@ -6,7 +6,9 @@ def test_customer_vehicle_booking_payment_flow(authed):
         "first_name": "A", "last_name": "B", "phone": "0821112233", "is_active": True
     }).json()
     v = authed.post("/api/v1/vehicles", json={
-        "customer_id": c["id"], "registration": "AA 111 GP", "size": "SEDAN", "is_active": True
+        "customer_id": c["id"], "registration": "AA 111 GP",
+        "colour": "Silver", "make": "Toyota", "model": "Corolla",
+        "size": "SEDAN", "is_active": True
     }).json()
     services = authed.get("/api/v1/services").json()["items"]
     branches = authed.get("/api/v1/branches").json()["items"]
@@ -21,6 +23,7 @@ def test_customer_vehicle_booking_payment_flow(authed):
     assert b.status_code == 201, b.text
     booking = b.json()
     assert booking["wash_stage"] == "BOOKED"
+    assert booking.get("ticket_number", "").startswith("T-")
 
     r = authed.post(f"/api/v1/bookings/{booking['id']}/check-in")
     assert r.status_code == 200

@@ -1,6 +1,8 @@
-import { Car, Clock3, UserRound } from "lucide-react";
+import { Car, Clock3, Ticket, UserRound } from "lucide-react";
 import { STAGE_LABELS } from "../lib/api";
 import { useEasyMode } from "../hooks/useEasyMode";
+import { useBranding } from "../hooks/useBranding";
+import { isShowRegistration, vehicleDescription } from "../lib/vehicles";
 
 export type BayBoardItem = {
   id: number;
@@ -12,12 +14,18 @@ export type BayBoardItem = {
   branch_name?: string | null;
   current_vehicle?: {
     registration?: string | null;
+    ticket_number?: string | null;
+    booking_number?: string;
+    description?: string | null;
+    colour?: string | null;
+    make?: string | null;
+    model?: string | null;
     customer?: string | null;
+    customer_phone?: string | null;
     service?: string | null;
     stage?: string;
     eta?: string | null;
     staff?: string | null;
-    booking_number?: string;
   } | null;
 };
 
@@ -39,9 +47,13 @@ export default function BayStatusCard({
   compact?: boolean;
 }) {
   const { easyMode } = useEasyMode();
+  const { branding } = useBranding();
+  const showReg = isShowRegistration(branding);
   const style = STATUS_STYLES[bay.status] || STATUS_STYLES.AVAILABLE;
   const v = bay.current_vehicle;
   const statusLabel = easyMode ? style.easyLabel : style.label;
+  const ticket = v?.ticket_number || v?.booking_number;
+  const desc = vehicleDescription(v);
 
   return (
     <div className={`card overflow-hidden ${style.pulse && !easyMode ? "bay-pulse" : ""} ring-1 ${style.ring}`}>
@@ -61,11 +73,18 @@ export default function BayStatusCard({
       <div className={`p-4 space-y-3 ${compact && !easyMode ? "text-sm" : easyMode ? "text-base" : ""}`}>
         {v ? (
           <>
+            <div className={`flex items-center gap-2 font-extrabold tracking-tight ${easyMode ? "text-3xl" : "text-2xl"}`}>
+              <Ticket size={easyMode ? 26 : 22} className="text-slate-400 shrink-0" />
+              {ticket || "—"}
+            </div>
             <div className={`flex items-center gap-2 font-semibold ${easyMode ? "text-xl" : "text-lg"}`}>
               <Car size={easyMode ? 22 : 18} className="text-slate-400" />
-              {v.registration || "—"}
+              {desc}
             </div>
-            <div className="text-slate-500">{v.customer}</div>
+            {showReg && v.registration && (
+              <div className="text-xs text-slate-400 uppercase tracking-wide">{v.registration}</div>
+            )}
+            <div className="text-slate-500">{v.customer}{v.customer_phone ? ` · ${v.customer_phone}` : ""}</div>
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="badge bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">{v.service || "Service"}</span>
               <span className="badge bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">

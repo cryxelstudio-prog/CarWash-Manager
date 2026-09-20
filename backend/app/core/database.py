@@ -66,10 +66,24 @@ def ensure_schema_patches() -> None:
             conn.execute(text("ALTER TABLE wash_bays ADD COLUMN assigned_employee_id INTEGER"))
 
         # users.easy_mode (v0.4.0) — nullable boolean preference
-        if "users" in {r[0] for r in conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}:
+        tables = {r[0] for r in conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+        if "users" in tables:
             ucols = _column_names(conn, "users")
             if "easy_mode" not in ucols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN easy_mode BOOLEAN"))
+
+        # v0.5.0 — wash ticket numbers; registration optional
+        if "bookings" in tables:
+            bcols = _column_names(conn, "bookings")
+            if "ticket_number" not in bcols:
+                conn.execute(text("ALTER TABLE bookings ADD COLUMN ticket_number VARCHAR(32)"))
+                # Backfill tickets for existing rows (T-0001…)
+                rows = conn.execute(text("SELECT id FROM bookings ORDER BY id")).fetchall()
+                for i, (bid,) in enumerate(rows, start=1):
+                    conn.execute(
+                        text("UPDATE bookings SET ticket_number = :tn WHERE id = :id"),
+                        {"tn": f"T-{i:04d}", "id": bid},
+                    )
 
 
 def init_db() -> None:

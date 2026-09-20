@@ -55,7 +55,7 @@ class CustomerOut(CustomerIn):
 
 class VehicleIn(BaseModel):
     customer_id: int
-    registration: str
+    registration: str | None = None  # optional; hidden by default in staff UI
     make: str | None = None
     model: str | None = None
     colour: str | None = None
@@ -69,6 +69,7 @@ class VehicleIn(BaseModel):
 class VehicleOut(VehicleIn):
     model_config = {"from_attributes": True}
     id: int
+    description: str | None = None
     created_at: datetime | None = None
 
 
@@ -143,6 +144,7 @@ class BookingOut(BaseModel):
     model_config = {"from_attributes": True}
     id: int
     booking_number: str
+    ticket_number: str | None = None
     customer_id: int
     vehicle_id: int
     branch_id: int
@@ -173,10 +175,12 @@ class BookingOut(BaseModel):
     completed_at: datetime | None = None
     collected_at: datetime | None = None
     created_at: datetime | None = None
-    # nested display
+    # nested display — ticket + description primary; plate optional
     customer_name: str | None = None
     vehicle_registration: str | None = None
     vehicle_make_model: str | None = None
+    vehicle_description: str | None = None
+    vehicle_colour: str | None = None
     service_name: str | None = None
     package_name: str | None = None
     branch_name: str | None = None
@@ -344,7 +348,10 @@ class QuickBookIn(BaseModel):
     customer_id: int | None = None
     customer_name: str | None = None
     customer_phone: str | None = None
-    registration: str | None = None
+    colour: str | None = None
+    make: str | None = None
+    model: str | None = None
+    registration: str | None = None  # optional / advanced
     wash_bay_id: int | None = None  # None / omit = Any
     notes: str | None = None
     source: str = "WALK_IN"

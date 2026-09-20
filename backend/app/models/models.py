@@ -326,7 +326,8 @@ class Vehicle(Base, TimestampMixin, SoftDeleteMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
-    registration: Mapped[str] = mapped_column(String(32), index=True)
+    # Optional — never the primary staff identifier (boss rule)
+    registration: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
     make: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     model: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     colour: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
@@ -338,6 +339,11 @@ class Vehicle(Base, TimestampMixin, SoftDeleteMixin):
 
     customer: Mapped["Customer"] = relationship(back_populates="vehicles")
     bookings: Mapped[list["Booking"]] = relationship(back_populates="vehicle")
+
+    @property
+    def description(self) -> str:
+        from app.utils.vehicles import vehicle_description
+        return vehicle_description(self) or "Vehicle"
 
 
 class FleetAccount(Base, TimestampMixin, SoftDeleteMixin):
@@ -471,6 +477,7 @@ class Booking(Base, TimestampMixin, SoftDeleteMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     booking_number: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    ticket_number: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
     vehicle_id: Mapped[int] = mapped_column(ForeignKey("vehicles.id"), index=True)
     branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id"), index=True)

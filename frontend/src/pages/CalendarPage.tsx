@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import PageHeader from "../components/ui/PageHeader";
 import { api, STAGE_LABELS } from "../lib/api";
+import { bookingPrimaryLabel, vehicleDescription } from "../lib/vehicles";
 
 export default function CalendarPage() {
   const [view, setView] = useState<"day" | "week" | "month" | "agenda">("week");
@@ -44,15 +45,15 @@ export default function CalendarPage() {
       } />
       <div className="card overflow-auto">
         <table className="table">
-          <thead><tr><th>Date</th><th>Time</th><th>Booking</th><th>Customer</th><th>Vehicle</th><th>Stage</th></tr></thead>
+          <thead><tr><th>Date</th><th>Time</th><th>Ticket</th><th>Customer</th><th>Vehicle</th><th>Stage</th></tr></thead>
           <tbody>
             {filtered.map((b) => (
               <tr key={b.id}>
                 <td>{b.scheduled_date}</td>
                 <td>{b.scheduled_time || "—"}</td>
-                <td>{b.booking_number}</td>
+                <td className="font-bold">{bookingPrimaryLabel(b)}</td>
                 <td>{b.customer_name}</td>
-                <td>{b.vehicle_registration}</td>
+                <td>{vehicleDescription(b)}</td>
                 <td>{STAGE_LABELS[b.wash_stage] || b.wash_stage}</td>
               </tr>
             ))}

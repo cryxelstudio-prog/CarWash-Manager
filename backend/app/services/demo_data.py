@@ -22,7 +22,7 @@ from app.models import (
     Vehicle,
 )
 from app.models.models import BookingStatus, PaymentMethod, PaymentStatus, WashStage
-from app.utils.numbering import next_number
+from app.utils.numbering import next_number, next_ticket_number
 
 
 def seed_demo_data(db: Session, *, branch_id: int, admin_user_id: int) -> None:
@@ -92,12 +92,13 @@ def seed_demo_data(db: Session, *, branch_id: int, admin_user_id: int) -> None:
         )
 
     # Customers + vehicles + bookings
+    # name, phone, optional reg, make, model, size, colour
     demo_customers = [
-        ("Sipho", "Dlamini", "0821112233", "CA 123-456", "Toyota", "Corolla", "SEDAN"),
-        ("Emma", "Botha", "0832223344", "GP 98-765", "VW", "Polo", "HATCHBACK"),
-        ("Ravi", "Patel", "0843334455", "ND 445566", "Ford", "Ranger", "BAKKIE"),
-        ("Lerato", "Khumalo", "0814445566", "CF 778899", "BMW", "X3", "SUV"),
-        ("Chris", "Adams", "0725556677", "CY 112233", "Mercedes", "C-Class", "SEDAN"),
+        ("Sipho", "Dlamini", "0821112233", "CA 123-456", "Toyota", "Corolla", "SEDAN", "Silver"),
+        ("Emma", "Botha", "0832223344", None, "VW", "Polo", "HATCHBACK", "White"),
+        ("Ravi", "Patel", "0843334455", "ND 445566", "Ford", "Ranger", "BAKKIE", "Blue"),
+        ("Lerato", "Khumalo", "0814445566", None, "BMW", "X3", "SUV", "Black"),
+        ("Chris", "Adams", "0725556677", None, "Mercedes", "C-Class", "SEDAN", "Grey"),
     ]
     today = date.today()
     stages = [
@@ -107,7 +108,7 @@ def seed_demo_data(db: Session, *, branch_id: int, admin_user_id: int) -> None:
         WashStage.READY,
         WashStage.COLLECTED,
     ]
-    for idx, (fn, ln, phone, reg, make, model, size) in enumerate(demo_customers):
+    for idx, (fn, ln, phone, reg, make, model, size, colour) in enumerate(demo_customers):
         cust = Customer(
             customer_number=next_number(db, Customer, "customer_number", "CUS"),
             first_name=fn,
@@ -125,7 +126,7 @@ def seed_demo_data(db: Session, *, branch_id: int, admin_user_id: int) -> None:
             make=make,
             model=model,
             size=size,
-            colour="Silver" if idx % 2 == 0 else "White",
+            colour=colour,
             is_active=True,
         )
         db.add(veh)
@@ -140,6 +141,7 @@ def seed_demo_data(db: Session, *, branch_id: int, admin_user_id: int) -> None:
         tax = (price * Decimal("0.15")).quantize(Decimal("0.01"))
         booking = Booking(
             booking_number=next_number(db, Booking, "booking_number", "BKG"),
+            ticket_number=next_ticket_number(db, Booking),
             customer_id=cust.id,
             vehicle_id=veh.id,
             branch_id=branch_id,

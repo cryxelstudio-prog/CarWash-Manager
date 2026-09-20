@@ -36,6 +36,7 @@ export default function QuickBookPage() {
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [mode, setMode] = useState<"new" | "existing">("new");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [form, setForm] = useState<any>({
     branch_id: "",
     vehicle_type: "SEDAN",
@@ -46,6 +47,9 @@ export default function QuickBookPage() {
     customer_name: "",
     customer_phone: "",
     customer_id: "",
+    colour: "",
+    make: "",
+    model: "",
     registration: "",
     wash_bay_id: "",
   });
@@ -93,6 +97,9 @@ export default function QuickBookPage() {
         scheduled_date: form.scheduled_date,
         scheduled_time: form.scheduled_time || null,
         wash_bay_id: form.wash_bay_id ? Number(form.wash_bay_id) : null,
+        colour: form.colour,
+        make: form.make,
+        model: form.model,
         registration: form.registration || null,
         source: "WALK_IN",
       };
@@ -104,7 +111,8 @@ export default function QuickBookPage() {
       }
       const b = await api<any>("/api/v1/bookings/quick", { method: "POST", body: JSON.stringify(payload) });
       setConfirmOpen(false);
-      setOk(easyMode ? `Booked — ${b.booking_number}` : `Booked ${b.booking_number}`);
+      const ticket = b.ticket_number || b.booking_number;
+      setOk(easyMode ? `Booked — ticket ${ticket}` : `Booked ${ticket}`);
       setTimeout(() => navigate("/queue"), 600);
     } catch (err) {
       setConfirmOpen(false);
@@ -226,9 +234,32 @@ export default function QuickBookPage() {
           </div>
         )}
 
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="label">{easyMode ? "Colour" : "Colour"}</label>
+            <input className="input" required value={form.colour} onChange={(e) => set("colour", e.target.value)} placeholder="White" />
+          </div>
+          <div>
+            <label className="label">{easyMode ? "Make" : "Make"}</label>
+            <input className="input" required value={form.make} onChange={(e) => set("make", e.target.value)} placeholder="VW" />
+          </div>
+          <div>
+            <label className="label">{easyMode ? "Model" : "Model"}</label>
+            <input className="input" required value={form.model} onChange={(e) => set("model", e.target.value)} placeholder="Polo" />
+          </div>
+        </div>
+        <p className="text-xs text-slate-500 -mt-2">Shown as e.g. &ldquo;White Polo&rdquo; — no number plate needed.</p>
+
         <div>
-          <label className="label">{easyMode ? "Number plate (optional)" : "Registration (optional)"}</label>
-          <input className="input uppercase" value={form.registration} onChange={(e) => set("registration", e.target.value.toUpperCase())} placeholder="CA 123-456" />
+          <button type="button" className="text-sm font-semibold text-sky-600" onClick={() => setAdvancedOpen((o) => !o)}>
+            {advancedOpen ? "Hide advanced details" : "Advanced details"}
+          </button>
+          {advancedOpen && (
+            <div className="mt-2">
+              <label className="label">{easyMode ? "Number plate (optional)" : "Registration (optional)"}</label>
+              <input className="input uppercase" value={form.registration} onChange={(e) => set("registration", e.target.value.toUpperCase())} placeholder="CA 123-456" />
+            </div>
+          )}
         </div>
 
         <div>
@@ -257,6 +288,7 @@ export default function QuickBookPage() {
         <div className="space-y-4 text-base">
           <p>Book a wash for <strong>{summaryName}</strong>?</p>
           <ul className="space-y-1 text-slate-600 dark:text-slate-300">
+            <li>{[form.colour, form.make, form.model].filter(Boolean).join(" ") || "Vehicle"}</li>
             <li>{selectedService?.name || selectedPackage?.name || "Service"}</li>
             <li>{form.scheduled_date} at {form.scheduled_time}</li>
             {estimate != null && <li>About {formatMoney(estimate)}</li>}

@@ -44,6 +44,9 @@ def test_quick_book_and_bay_busy(authed):
             "scheduled_time": "10:00",
             "customer_name": "Sipho Dlamini",
             "customer_phone": "0821112233",
+            "colour": "Silver",
+            "make": "Toyota",
+            "model": "Corolla",
             "registration": "GP12ABGP",
             "wash_bay_id": bay["id"],
         },
@@ -64,6 +67,10 @@ def test_quick_book_and_bay_busy(authed):
     bay1 = next(b for b in board["items"] if b["id"] == bay["id"])
     assert bay1["status"] == "BUSY"
     assert bay1["current_vehicle"] is not None
+    assert bay1["current_vehicle"]["ticket_number"]
+    assert bay1["current_vehicle"]["ticket_number"].startswith("T-")
+    assert "Silver" in (bay1["current_vehicle"].get("description") or "")
+    # Plate still stored when provided, but not primary
     assert bay1["current_vehicle"]["registration"] == "GP12ABGP"
 
     # Free bay

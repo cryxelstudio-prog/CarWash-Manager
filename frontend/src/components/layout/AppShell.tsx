@@ -190,7 +190,7 @@ export default function AppShell() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
                 className="input pl-9 !py-2 !min-h-[40px]"
-                placeholder="Search…"
+                placeholder="Ticket, phone, name, car…"
                 value={q}
                 onChange={(e) => search(e.target.value)}
               />

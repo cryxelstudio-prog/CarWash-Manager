@@ -41,7 +41,8 @@ export default function HelpPage() {
           <p>This platform runs fully offline after install. Microsoft 365, SharePoint, Power Apps, email/SMS and card gateways are optional adapters and start as <strong>Not configured</strong>.</p>
           <ol className="list-decimal pl-5 space-y-1">
             <li>Complete first-run setup (admin, company, branch).</li>
-            <li>Add customers and vehicles.</li>
+            <li>Find cars by <strong>ticket</strong> (T-0042), customer name/phone, or description (White Polo) — plates are optional.</li>
+            <li>Add customers and vehicles (colour + make + model).</li>
             <li>Create a booking, check in, move wash stages on the Live Queue.</li>
             <li>Record payment and print/download the receipt PDF.</li>
             <li>Review Dashboard KPIs and Reports, then create a Backup.</li>

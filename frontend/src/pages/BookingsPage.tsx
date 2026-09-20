@@ -3,8 +3,12 @@ import { Link } from "react-router-dom";
 import PageHeader from "../components/ui/PageHeader";
 import Modal from "../components/ui/Modal";
 import { api, ApiError, formatMoney, STAGE_LABELS } from "../lib/api";
+import { useBranding } from "../hooks/useBranding";
+import { bookingPrimaryLabel, isShowRegistration, vehicleDescription } from "../lib/vehicles";
 
 export default function BookingsPage() {
+  const { branding } = useBranding();
+  const showReg = isShowRegistration(branding);
   const [items, setItems] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -71,15 +75,15 @@ export default function BookingsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>No.</th><th>Customer</th><th>Vehicle</th><th>Service</th><th>Date</th><th>Stage</th><th>Total</th><th>Payment</th><th></th>
+              <th>Ticket</th><th>Customer</th><th>Vehicle</th><th>Service</th><th>Date</th><th>Stage</th><th>Total</th><th>Payment</th><th></th>
             </tr>
           </thead>
           <tbody>
             {items.map((b) => (
               <tr key={b.id}>
-                <td>{b.booking_number}</td>
-                <td>{b.customer_name}</td>
-                <td>{b.vehicle_registration}</td>
+                <td className="font-bold">{bookingPrimaryLabel(b)}</td>
+                <td>{b.customer_name}{b.customer_phone ? ` · ${b.customer_phone}` : ""}</td>
+                <td>{vehicleDescription(b)}{showReg && b.vehicle_registration ? ` (${b.vehicle_registration})` : ""}</td>
                 <td>{b.service_name || b.package_name}</td>
                 <td>{b.scheduled_date} {b.scheduled_time || ""}</td>
                 <td><span className="badge bg-sky-100 text-sky-800">{STAGE_LABELS[b.wash_stage] || b.wash_stage}</span></td>
@@ -107,7 +111,7 @@ export default function BookingsPage() {
             <label className="label">Vehicle</label>
             <select className="input" required value={form.vehicle_id || ""} onChange={(e) => setForm({ ...form, vehicle_id: e.target.value })}>
               <option value="">Select…</option>
-              {vehicles.map((v) => <option key={v.id} value={v.id}>{v.registration} — {v.make} {v.model}</option>)}
+              {vehicles.map((v) => <option key={v.id} value={v.id}>{vehicleDescription(v)}{showReg && v.registration ? ` (${v.registration})` : ""}</option>)}
             </select>
           </div>
           <div>

@@ -10,7 +10,8 @@ from app.models import Booking, BookingItem, Customer, Package, Service, Vehicle
 from app.models.models import BookingStatus, PaymentStatus, WASH_STAGE_ORDER, WashStage
 from app.schemas.entities import BookingIn, StageMoveIn
 from app.services.audit import activity, audit
-from app.utils.numbering import next_number
+from app.utils.numbering import next_number, next_ticket_number
+from app.utils.vehicles import normalize_registration, vehicle_description
 
 
 def _price_for(db: Session, data: BookingIn) -> tuple[Decimal, Decimal, Decimal, int]:
@@ -49,9 +50,11 @@ def _price_for(db: Session, data: BookingIn) -> tuple[Decimal, Decimal, Decimal,
 
 
 def serialize_booking(b: Booking) -> dict:
+    veh = b.vehicle
     return {
         "id": b.id,
         "booking_number": b.booking_number,
+        "ticket_number": b.ticket_number,
         "customer_id": b.customer_id,
         "vehicle_id": b.vehicle_id,
         "branch_id": b.branch_id,
@@ -83,8 +86,10 @@ def serialize_booking(b: Booking) -> dict:
         "collected_at": b.collected_at,
         "created_at": b.created_at,
         "customer_name": b.customer.full_name if b.customer else None,
-        "vehicle_registration": b.vehicle.registration if b.vehicle else None,
-        "vehicle_make_model": f"{b.vehicle.make or ''} {b.vehicle.model or ''}".strip() if b.vehicle else None,
+        "vehicle_registration": veh.registration if veh else None,
+        "vehicle_make_model": f"{veh.make or ''} {veh.model or ''}".strip() if veh else None,
+        "vehicle_description": vehicle_description(veh),
+        "vehicle_colour": veh.colour if veh else None,
         "service_name": b.service.name if b.service else None,
         "package_name": b.package.name if b.package else None,
         "branch_name": b.branch.name if b.branch else None,
@@ -102,6 +107,7 @@ def create_booking(db: Session, data: BookingIn, user_id: int | None = None, use
     subtotal, tax, total, duration = _price_for(db, data)
     booking = Booking(
         booking_number=next_number(db, Booking, "booking_number", "BKG"),
+        ticket_number=next_ticket_number(db, Booking),
         customer_id=data.customer_id,
         vehicle_id=data.vehicle_id,
         branch_id=data.branch_id,
@@ -263,9 +269,7 @@ def move_stage(db: Session, booking_id: int, data: StageMoveIn, user_id: int | N
 
 def quick_book(db: Session, data, user_id: int | None = None, username: str | None = None) -> Booking:
     """Lazy-simple booking: resolve/create customer + vehicle, then book."""
-    from app.models import Customer, Vehicle
-    from app.schemas.entities import BookingIn, QuickBookIn
-    from app.utils.numbering import next_number
+    from app.schemas.entities import QuickBookIn
 
     if not isinstance(data, QuickBookIn):
         data = QuickBookIn.model_validate(data)
@@ -304,8 +308,13 @@ def quick_book(db: Session, data, user_id: int | None = None, username: str | No
             db.add(customer)
             db.flush()
 
-    # Vehicle: reuse customer's first matching size/reg or create a placeholder
-    reg = (data.registration or "").strip().upper()
+    # Vehicle: match by optional plate, else colour+make+model+size, else create
+    colour = (data.colour or "").strip() or None
+    make = (data.make or "").strip() or None
+    model = (data.model or "").strip() or None
+    if not colour or not make or not model:
+        raise ValueError("Vehicle colour, make and model are required")
+    reg = normalize_registration(data.registration)
     vehicle = None
     if reg:
         vehicle = (
@@ -314,30 +323,40 @@ def quick_book(db: Session, data, user_id: int | None = None, username: str | No
             .first()
         )
     if not vehicle:
-        # Prefer an existing vehicle of this size
         vehicle = (
             db.query(Vehicle)
             .filter(
                 Vehicle.is_deleted.is_(False),
                 Vehicle.customer_id == customer.id,
                 Vehicle.size == data.vehicle_type,
+                Vehicle.colour == colour,
+                Vehicle.make == make,
+                Vehicle.model == model,
             )
             .first()
         )
     if not vehicle:
-        if not reg:
-            # Generate a walk-in placeholder registration
-            reg = f"WALK-{customer.id}-{int(datetime.utcnow().timestamp()) % 100000}"
         vehicle = Vehicle(
             customer_id=customer.id,
             registration=reg,
             size=data.vehicle_type or "SEDAN",
-            make=None,
-            model=None,
+            colour=colour,
+            make=make,
+            model=model,
             is_active=True,
         )
         db.add(vehicle)
         db.flush()
+    else:
+        # Refresh description fields if provided
+        if colour:
+            vehicle.colour = colour
+        if make:
+            vehicle.make = make
+        if model:
+            vehicle.model = model
+        if reg and not vehicle.registration:
+            vehicle.registration = reg
 
     payload = BookingIn(
         customer_id=customer.id,

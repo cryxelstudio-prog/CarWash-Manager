@@ -42,6 +42,9 @@ export default function SettingsPage() {
           "locale.date_format": branding["locale.date_format"] || "DD/MM/YYYY",
           "locale.tax_rate": branding["locale.tax_rate"] || "15",
           "hosting.cors_origins_extra": branding["hosting.cors_origins_extra"] || "",
+          "vehicles.show_registration": branding["vehicles.show_registration"] || "false",
+          "vehicles.require_registration": branding["vehicles.require_registration"] || "false",
+          "vehicles.hide_registration": branding["vehicles.hide_registration"] || "true",
         }),
       });
       applyAccent(branding["app.accent_colour"]);
@@ -173,6 +176,63 @@ export default function SettingsPage() {
       </form>
 
       <div className="card p-4 md:p-5 space-y-3 mb-4">
+        <h3 className="font-bold">Vehicle identification</h3>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Staff use <strong>wash ticket</strong> (e.g. T-0042), <strong>customer name + phone</strong>, and <strong>colour + make + model</strong> (e.g. White Polo).
+          Registration plates are optional and hidden by default.
+        </p>
+        <label className="flex items-center gap-3 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={(branding["vehicles.show_registration"] || "false").toLowerCase() === "true"}
+            onChange={(e) => {
+              const on = e.target.checked;
+              setBranding({
+                ...branding,
+                "vehicles.show_registration": on ? "true" : "false",
+                "vehicles.hide_registration": on ? "false" : "true",
+              });
+            }}
+          />
+          Show registration plates
+        </label>
+        <label className="flex items-center gap-3 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={(branding["vehicles.require_registration"] || "false").toLowerCase() === "true"}
+            onChange={(e) => setBranding({ ...branding, "vehicles.require_registration": e.target.checked ? "true" : "false" })}
+          />
+          Require registration (admin)
+        </label>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={async () => {
+            setError("");
+            setMsg("");
+            try {
+              await api("/api/v1/branding", {
+                method: "PUT",
+                body: JSON.stringify({
+                  "vehicles.show_registration": branding["vehicles.show_registration"] || "false",
+                  "vehicles.require_registration": branding["vehicles.require_registration"] || "false",
+                  "vehicles.hide_registration": branding["vehicles.hide_registration"] || "true",
+                }),
+              });
+              await refresh();
+              setMsg("Vehicle identification settings saved");
+            } catch (err) {
+              setError(err instanceof ApiError ? err.detail : "Save failed");
+            }
+          }}
+        >
+          Save identification settings
+        </button>
+      </div>
+
+      <div className="card p-4 md:p-5 space-y-3 mb-4">
         <h3 className="font-bold">Simple / Easy mode</h3>
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Larger text and buttons for comfortable daily use. Available to <strong>every role</strong> (including Owner and Manager). Preference is saved on your user account.
@@ -198,7 +258,7 @@ export default function SettingsPage() {
           Use the <strong>Launch</strong> sidebar page for QR staff access, LAN, Power Apps and SharePoint wizards.
           Guides: <code className="text-xs">docs/LAUNCH_GUIDE.txt</code>, <code className="text-xs">docs/HOSTING_OPTIONS.txt</code>.
         </p>
-        <p className="text-xs text-slate-500">App version 0.4.0 · Default currency ZAR · Africa/Johannesburg</p>
+        <p className="text-xs text-slate-500">App version 0.5.0 · Default currency ZAR · Africa/Johannesburg</p>
       </div>
     </div>
   );
