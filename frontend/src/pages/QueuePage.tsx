@@ -86,7 +86,18 @@ export default function QueuePage() {
                       {b.customer_name}{b.customer_phone ? ` · ${b.customer_phone}` : ""}
                     </div>
                     <div className="text-xs">{b.service_name || b.package_name}</div>
-                    <div className="text-xs">{formatMoney(b.total_amount)} · {b.payment_status}</div>
+                    <div className="text-xs flex flex-wrap items-center gap-2">
+                      <span>{formatMoney(b.total_amount)} · {b.payment_status}</span>
+                      {(b.pay_badge || (b.payment_method_intent === "salary_deduction" ? "SALARY" : b.payment_method_intent === "cash" ? "CASH" : null)) && (
+                        <span className={`badge text-[10px] font-bold ${
+                          (b.pay_badge || "").includes("SALARY") || b.payment_method_intent === "salary_deduction"
+                            ? "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+                        }`}>
+                          {b.pay_badge || (b.payment_method_intent === "salary_deduction" ? "SALARY" : "CASH")}
+                        </span>
+                      )}
+                    </div>
                     {b.wash_bay_id && (
                       <div className="text-xs font-medium text-sky-600">
                         {bays.find((x) => x.id === b.wash_bay_id)?.name || `Bay #${b.wash_bay_id}`}

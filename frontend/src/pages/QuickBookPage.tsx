@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/ui/PageHeader";
 import Modal from "../components/ui/Modal";
 import { useEasyMode } from "../hooks/useEasyMode";
+import { useBranding } from "../hooks/useBranding";
 import { api, ApiError, formatMoney } from "../lib/api";
 
 const VEHICLE_TYPES = [
@@ -37,6 +38,9 @@ export default function QuickBookPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const { branding } = useBranding();
+  const allowSalary = (branding["payments.allow_salary_deduction"] ?? "true").toLowerCase() !== "false";
+  const [morePay, setMorePay] = useState(false);
   const [form, setForm] = useState<any>({
     branch_id: "",
     vehicle_type: "SEDAN",
@@ -52,6 +56,9 @@ export default function QuickBookPage() {
     model: "",
     registration: "",
     wash_bay_id: "",
+    payment_method_intent: "",
+    employee_number: "",
+    employee_department: "",
   });
 
   useEffect(() => {
@@ -102,6 +109,9 @@ export default function QuickBookPage() {
         model: form.model,
         registration: form.registration || null,
         source: "WALK_IN",
+        payment_method_intent: form.payment_method_intent || null,
+        employee_number: form.employee_number || null,
+        employee_department: form.employee_department || null,
       };
       if (mode === "existing") {
         payload.customer_id = Number(form.customer_id);
@@ -124,6 +134,15 @@ export default function QuickBookPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    setError("");
+    if (!form.payment_method_intent) {
+      setError("How will you pay? Choose Cash or Salary deduction.");
+      return;
+    }
+    if (form.payment_method_intent === "salary_deduction" && !(form.employee_number || "").trim()) {
+      setError("Employee number is required for salary deduction (anyone can use it — including walk-ins).");
+      return;
+    }
     if (easyMode) {
       setConfirmOpen(true);
       return;
@@ -272,6 +291,82 @@ export default function QuickBookPage() {
           </select>
         </div>
 
+
+        <div className="space-y-3">
+          <label className={`label ${easyMode ? "!text-lg" : ""}`}>How will you pay?</label>
+          <div className={`grid gap-2 ${easyMode ? "grid-cols-1" : "grid-cols-2"}`}>
+            <button
+              type="button"
+              className={`rounded-2xl border-2 px-4 ${easyMode ? "py-5 text-xl" : "py-4 text-base"} font-bold transition ${
+                form.payment_method_intent === "cash"
+                  ? "border-emerald-600 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+                  : "border-slate-200 dark:border-slate-700"
+              }`}
+              onClick={() => set("payment_method_intent", "cash")}
+            >
+              Cash
+              <span className={`block font-normal text-slate-500 ${easyMode ? "text-base" : "text-xs"}`}>Pay at bay</span>
+            </button>
+            {allowSalary && (
+              <button
+                type="button"
+                className={`rounded-2xl border-2 px-4 ${easyMode ? "py-5 text-xl" : "py-4 text-base"} font-bold transition ${
+                  form.payment_method_intent === "salary_deduction"
+                    ? "border-violet-600 bg-violet-50 text-violet-900 dark:bg-violet-950/40 dark:text-violet-100"
+                    : "border-slate-200 dark:border-slate-700"
+                }`}
+                onClick={() => set("payment_method_intent", "salary_deduction")}
+              >
+                Salary deduction
+                <span className={`block font-normal text-slate-500 ${easyMode ? "text-base" : "text-xs"}`}>Billed at month end</span>
+              </button>
+            )}
+          </div>
+          <button type="button" className="text-sm font-semibold text-sky-600" onClick={() => setMorePay((o) => !o)}>
+            {morePay ? "Hide more options" : "More…"}
+          </button>
+          {morePay && (
+            <div className={`grid gap-2 ${easyMode ? "grid-cols-1" : "grid-cols-3"}`}>
+              {["card", "eft", "account", "other"].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`rounded-xl border-2 px-3 ${easyMode ? "py-4 text-lg" : "py-3 text-sm"} font-semibold capitalize ${
+                    form.payment_method_intent === m ? "border-sky-600 bg-sky-50 dark:bg-sky-950/40" : "border-slate-200 dark:border-slate-700"
+                  }`}
+                  onClick={() => set("payment_method_intent", m)}
+                >
+                  {m === "eft" ? "EFT" : m}
+                </button>
+              ))}
+            </div>
+          )}
+          {form.payment_method_intent === "salary_deduction" && (
+            <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-violet-50/80 dark:bg-violet-950/30 p-3">
+              <div className="sm:col-span-2">
+                <label className="label">Employee number <span className="text-rose-600">*</span></label>
+                <input
+                  className="input"
+                  required
+                  value={form.employee_number}
+                  onChange={(e) => set("employee_number", e.target.value)}
+                  placeholder="e.g. EMP-042"
+                />
+                <p className="mt-1 text-xs text-slate-500">Anyone can use salary deduction — including walk-ins — if they enter an employee number.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label">Department (optional)</label>
+                <input
+                  className="input"
+                  value={form.employee_department}
+                  onChange={(e) => set("employee_department", e.target.value)}
+                  placeholder="e.g. Finance"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         {estimate != null && (
           <div className={`rounded-xl bg-sky-50 dark:bg-sky-950/40 px-4 py-3 flex justify-between ${easyMode ? "text-base" : "text-sm"}`}>
             <span className="text-slate-600 dark:text-slate-300">{easyMode ? "Price (about)" : "Estimate (ex. extras)"}</span>
@@ -279,7 +374,7 @@ export default function QuickBookPage() {
           </div>
         )}
 
-        <button className="btn-primary w-full !py-3.5 text-base" disabled={busy || (!form.service_id && !form.package_id)}>
+        <button className="btn-primary w-full !py-3.5 text-base" disabled={busy || (!form.service_id && !form.package_id) || !form.payment_method_intent}>
           {busy ? "Booking…" : easyMode ? "Book a wash" : "Confirm booking"}
         </button>
       </form>
@@ -292,6 +387,16 @@ export default function QuickBookPage() {
             <li>{selectedService?.name || selectedPackage?.name || "Service"}</li>
             <li>{form.scheduled_date} at {form.scheduled_time}</li>
             {estimate != null && <li>About {formatMoney(estimate)}</li>}
+            <li>
+              Pay:{" "}
+              <strong>
+                {form.payment_method_intent === "salary_deduction"
+                  ? `Salary deduction (${form.employee_number || "—"})`
+                  : form.payment_method_intent === "cash"
+                    ? "Cash – pay at bay"
+                    : form.payment_method_intent || "—"}
+              </strong>
+            </li>
           </ul>
           <div className="flex flex-col sm:flex-row gap-2">
             <button type="button" className="btn-primary flex-1" disabled={busy} onClick={() => doBook()}>

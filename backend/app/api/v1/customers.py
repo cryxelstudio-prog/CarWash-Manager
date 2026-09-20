@@ -50,6 +50,7 @@ def list_customers(
             city=c.city,
             notes=c.notes,
             tags=c.tags,
+            employee_number=c.employee_number,
             preferred_branch_id=c.preferred_branch_id,
             marketing_opt_in=c.marketing_opt_in,
             is_active=c.is_active,
@@ -79,7 +80,13 @@ def get_customer(customer_id: int, db: Session = Depends(get_db), ctx: AuthConte
     c = db.get(Customer, customer_id)
     if not c or c.is_deleted:
         not_found("Customer not found")
-    return CustomerOut(id=c.id, customer_number=c.customer_number, full_name=c.full_name, created_at=c.created_at, **CustomerIn.model_validate(c).model_dump())
+    return CustomerOut(
+        id=c.id,
+        customer_number=c.customer_number,
+        full_name=c.full_name,
+        created_at=c.created_at,
+        **CustomerIn.model_validate(c, from_attributes=True).model_dump(),
+    )
 
 
 @router.put("/{customer_id}")
@@ -105,3 +112,29 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db), ctx: AuthCo
     c.is_active = False
     db.commit()
     return {"message": "Customer archived"}
+
+
+@router.get("/{customer_id}/salary-balance")
+def customer_salary_balance(
+    customer_id: int,
+    db: Session = Depends(get_db),
+    ctx: AuthContext = Depends(require_permission("customers.view", "customers.manage", "payments.view")),
+):
+    """Outstanding salary-deduction amounts for this customer (walk-ins included)."""
+    from app.services.payment_intent import outstanding_salary_for_customer, outstanding_salary_for_employee
+
+    cust = db.get(Customer, customer_id)
+    if not cust or cust.is_deleted:
+        from app.api.v1.helpers import not_found
+        not_found()
+    by_customer = float(outstanding_salary_for_customer(db, customer_id))
+    by_emp = 0.0
+    if cust.employee_number:
+        by_emp = float(outstanding_salary_for_employee(db, cust.employee_number))
+    return {
+        "customer_id": customer_id,
+        "employee_number": cust.employee_number,
+        "outstanding_by_customer": by_customer,
+        "outstanding_by_employee_number": by_emp,
+        "outstanding": max(by_customer, by_emp) if cust.employee_number else by_customer,
+    }

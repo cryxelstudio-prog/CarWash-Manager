@@ -100,15 +100,37 @@ class PaymentMethod(str, enum.Enum):
     EFT = "EFT"
     ACCOUNT = "ACCOUNT"
     VOUCHER = "VOUCHER"
+    SALARY_DEDUCTION = "SALARY_DEDUCTION"
     OTHER = "OTHER"
 
 
 class PaymentStatus(str, enum.Enum):
     PENDING = "PENDING"
+    PENDING_SALARY = "PENDING_SALARY"
     PARTIAL = "PARTIAL"
     PAID = "PAID"
     REFUNDED = "REFUNDED"
     CANCELLED = "CANCELLED"
+
+
+# Booking payment intent (Quick Book / mobile) — lowercase values
+PAYMENT_METHOD_INTENTS = (
+    "cash",
+    "salary_deduction",
+    "card",
+    "eft",
+    "account",
+    "other",
+)
+
+INTENT_TO_PAYMENT_METHOD = {
+    "cash": PaymentMethod.CASH.value,
+    "salary_deduction": PaymentMethod.SALARY_DEDUCTION.value,
+    "card": PaymentMethod.CARD.value,
+    "eft": PaymentMethod.EFT.value,
+    "account": PaymentMethod.ACCOUNT.value,
+    "other": PaymentMethod.OTHER.value,
+}
 
 
 class VehicleSize(str, enum.Enum):
@@ -306,6 +328,7 @@ class Customer(Base, TimestampMixin, SoftDeleteMixin):
     city: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     tags: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    employee_number: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
     is_fleet: Mapped[bool] = mapped_column(Boolean, default=False)
     fleet_account_id: Mapped[Optional[int]] = mapped_column(ForeignKey("fleet_accounts.id"), nullable=True)
     preferred_branch_id: Mapped[Optional[int]] = mapped_column(ForeignKey("branches.id"), nullable=True)
@@ -508,6 +531,10 @@ class Booking(Base, TimestampMixin, SoftDeleteMixin):
     discount_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
     total_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
     payment_status: Mapped[str] = mapped_column(String(32), default=PaymentStatus.PENDING.value)
+    # v0.7.0 — how customer intends to pay (Quick Book / mobile)
+    payment_method_intent: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
+    employee_number: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    employee_department: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
     arrived_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     checked_in_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -603,6 +630,9 @@ class Payment(Base, TimestampMixin, SoftDeleteMixin):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     received_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     paid_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    # v0.7.0 — salary deduction payroll tracking
+    employee_number: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    exported_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     booking: Mapped[Optional["Booking"]] = relationship(back_populates="payments")
     invoice: Mapped[Optional["Invoice"]] = relationship(back_populates="payments")

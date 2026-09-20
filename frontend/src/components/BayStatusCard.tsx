@@ -26,6 +26,8 @@ export type BayBoardItem = {
     stage?: string;
     eta?: string | null;
     staff?: string | null;
+    payment_method_intent?: string | null;
+    pay_badge?: string | null;
   } | null;
 };
 
@@ -90,6 +92,15 @@ export default function BayStatusCard({
               <span className="badge bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
                 {STAGE_LABELS[v.stage || ""] || v.stage}
               </span>
+              {(v.pay_badge || v.payment_method_intent) && (
+                <span className={`badge font-bold ${
+                  (v.pay_badge === "SALARY" || v.payment_method_intent === "salary_deduction")
+                    ? "bg-violet-100 text-violet-900 dark:bg-violet-900/50 dark:text-violet-100"
+                    : "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100"
+                }`}>
+                  {v.pay_badge || (v.payment_method_intent === "salary_deduction" ? "SALARY" : (v.payment_method_intent || "").toUpperCase())}
+                </span>
+              )}
             </div>
             <div className={`flex items-center justify-between ${easyMode ? "text-base" : "text-sm"} text-slate-500`}>
               <span className="inline-flex items-center gap-1"><Clock3 size={14} /> {v.eta || "—"}</span>

@@ -1,6 +1,6 @@
 Car Wash Manager — Launch Guide
 ================================
-Version 0.6.0
+Version 0.7.0
 
 Use the in-app **Launch** sidebar page for wizards. This file is the short reference.
 

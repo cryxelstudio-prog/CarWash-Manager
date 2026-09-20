@@ -49,6 +49,7 @@ def branding(db: Session = Depends(get_db)):
         "locale.currency", "locale.currency_symbol", "locale.timezone", "locale.date_format", "locale.tax_rate",
         "hosting.cors_origins_extra", "app.version",
         "vehicles.show_registration", "vehicles.require_registration", "vehicles.hide_registration",
+        "payments.allow_salary_deduction", "payments.salary_monthly_cap",
     ]
     return {k: get_setting(db, k) for k in keys}
 
@@ -444,10 +445,12 @@ def update_branding(
         "vehicles.show_registration",
         "vehicles.require_registration",
         "vehicles.hide_registration",
+        "payments.allow_salary_deduction",
+        "payments.salary_monthly_cap",
     }
     for key, value in (payload or {}).items():
         if key in allowed:
             set_setting(db, key, "" if value is None else str(value), category=key.split(".")[0])
     db.commit()
-    keys = list(allowed) + ["app.version"]
+    keys = list(allowed) + ["app.version", "payments.allow_salary_deduction", "payments.salary_monthly_cap"]
     return {k: get_setting(db, k) for k in keys}

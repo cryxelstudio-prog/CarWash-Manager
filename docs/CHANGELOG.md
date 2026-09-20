@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0 — 2026-09-20
+- **Booking payment intent** — Quick Book, Easy Mode and `/m` require **How will you pay?** with large **Cash** / **Salary deduction** buttons (More… for card / EFT / account / other).
+- **Anyone can use salary deduction** (including walk-ins) if they enter an **employee number**; cash does not need one. Validated server-side with a clear error when missing.
+- **Salary deduction ledger** — on wash READY/COLLECTED, auto-creates payment `PENDING_SALARY` / unpaid invoice; customer view shows outstanding salary balance; manager can mark batch deducted/paid.
+- **Payroll export** — Payments page: date-range CSV (default current month) with employee_number, name, phone, tickets, dates, amounts, total; optional mark `exported_at` + re-include toggle.
+- **Settings** — Allow salary deduction (default ON); optional soft monthly cap warning per employee number.
+- **UX** — Receipt/PDF: “Salary deduction – billed at month end” / “Cash – pay at bay”; queue & bay cards show **CASH** / **SALARY** badges.
+- Offline-first; no external payment gateway required. Full backend still supports card/EFT/account/voucher.
+- Version bump to 0.7.0.
+
 ## 0.6.0 — 2026-09-20
 - **Local calendar authoritative** — Day/Week/Month/Agenda shows ticket + vehicle description; click for details; colour by status/bay; branch filter; **Add to calendar (.ics)** without Outlook.
 - **Owner alerts** — Launch + Settings: owner name/email and toggles (car ready / completed / booking / cancelled / no-show). Stage → READY/COLLECTED (and create/cancel/no-show) creates in-app notification and best-effort outbound email.

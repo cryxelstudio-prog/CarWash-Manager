@@ -34,12 +34,23 @@ def build_receipt_pdf(db: Session, payment_id: int) -> bytes:
     story.append(Paragraph(f"<b>{company}</b>", styles["Title"]))
     story.append(Paragraph("RECEIPT", styles["Heading2"]))
     story.append(Spacer(1, 8))
+    method_label = payment.method
+    if payment.method == "SALARY_DEDUCTION":
+        method_label = "Salary deduction – billed at month end"
+    elif payment.method == "CASH":
+        method_label = "Cash – pay at bay"
+    if booking and getattr(booking, "payment_method_intent", None) == "cash" and payment.method == "CASH":
+        method_label = "Cash – pay at bay"
+    if booking and getattr(booking, "payment_method_intent", None) == "salary_deduction":
+        method_label = "Salary deduction – billed at month end"
     meta = [
         ["Receipt No:", payment.payment_number],
         ["Date:", payment.paid_at.strftime("%d/%m/%Y %H:%M") if payment.paid_at else ""],
-        ["Method:", payment.method],
+        ["Method:", method_label],
         ["Reference:", payment.reference or "-"],
     ]
+    if payment.employee_number:
+        meta.append(["Employee No:", payment.employee_number])
     if booking:
         show_reg = (get_setting(db, "vehicles.show_registration", "false") or "false").lower() in ("1", "true", "yes")
         veh_label = vehicle_description(booking.vehicle) or ""

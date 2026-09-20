@@ -99,6 +99,28 @@ def ensure_schema_patches() -> None:
             if "outbound_error" not in ncols:
                 conn.execute(text("ALTER TABLE notifications ADD COLUMN outbound_error TEXT"))
 
+        # v0.7.0 — booking payment intent + salary deduction ledger
+        if "bookings" in tables:
+            bcols = _column_names(conn, "bookings")
+            if "payment_method_intent" not in bcols:
+                conn.execute(text("ALTER TABLE bookings ADD COLUMN payment_method_intent VARCHAR(32)"))
+            if "employee_number" not in bcols:
+                conn.execute(text("ALTER TABLE bookings ADD COLUMN employee_number VARCHAR(64)"))
+            if "employee_department" not in bcols:
+                conn.execute(text("ALTER TABLE bookings ADD COLUMN employee_department VARCHAR(128)"))
+
+        if "payments" in tables:
+            pcols = _column_names(conn, "payments")
+            if "employee_number" not in pcols:
+                conn.execute(text("ALTER TABLE payments ADD COLUMN employee_number VARCHAR(64)"))
+            if "exported_at" not in pcols:
+                conn.execute(text("ALTER TABLE payments ADD COLUMN exported_at DATETIME"))
+
+        if "customers" in tables:
+            ccols = _column_names(conn, "customers")
+            if "employee_number" not in ccols:
+                conn.execute(text("ALTER TABLE customers ADD COLUMN employee_number VARCHAR(64)"))
+
 
 def init_db() -> None:
     """Create tables if needed (Alembic preferred; fallback for smoke)."""

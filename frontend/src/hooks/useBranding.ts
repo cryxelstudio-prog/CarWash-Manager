@@ -50,6 +50,6 @@ export function useBranding() {
     appName: branding["app.name"] || "Car Wash Manager",
     logoUrl: branding["app.logo_url"] || "",
     accent: branding["app.accent_colour"] || "#0ea5e9",
-    version: branding["app.version"] || "0.6.0",
+    version: branding["app.version"] || "0.7.0",
   };
 }

@@ -40,6 +40,7 @@ class CustomerIn(BaseModel):
     city: str | None = None
     notes: str | None = None
     tags: str | None = None
+    employee_number: str | None = None
     preferred_branch_id: int | None = None
     marketing_opt_in: bool = False
     is_active: bool = True
@@ -138,6 +139,9 @@ class BookingIn(BaseModel):
     customer_email: str | None = None
     discount_amount: Decimal = Decimal("0")
     extras: list[dict[str, Any]] = []
+    payment_method_intent: str | None = None
+    employee_number: str | None = None
+    employee_department: str | None = None
 
 
 class BookingOut(BaseModel):
@@ -167,8 +171,13 @@ class BookingOut(BaseModel):
     discount_amount: Decimal
     total_amount: Decimal
     payment_status: str
+    payment_method_intent: str | None = None
+    employee_number: str | None = None
+    employee_department: str | None = None
     customer_phone: str | None = None
     customer_email: str | None = None
+    bay_name: str | None = None
+    salary_cap_warning: str | None = None
     arrived_at: datetime | None = None
     checked_in_at: datetime | None = None
     started_at: datetime | None = None
@@ -203,6 +212,8 @@ class PaymentIn(BaseModel):
     method: str = "CASH"
     reference: str | None = None
     notes: str | None = None
+    employee_number: str | None = None
+    status: str | None = None
 
 
 class PaymentOut(BaseModel):
@@ -217,6 +228,8 @@ class PaymentOut(BaseModel):
     method: str
     status: str
     reference: str | None = None
+    employee_number: str | None = None
+    exported_at: datetime | None = None
     notes: str | None = None
     paid_at: datetime | None = None
 
@@ -355,6 +368,9 @@ class QuickBookIn(BaseModel):
     wash_bay_id: int | None = None  # None / omit = Any
     notes: str | None = None
     source: str = "WALK_IN"
+    payment_method_intent: str | None = None
+    employee_number: str | None = None
+    employee_department: str | None = None
 
 
 class CashUpIn(BaseModel):

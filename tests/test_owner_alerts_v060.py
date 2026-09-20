@@ -15,6 +15,7 @@ def _quick_book(client, **overrides):
         "colour": "Red",
         "make": "Toyota",
         "model": "Corolla",
+        "payment_method_intent": "cash",
     }
     payload.update(overrides)
     r = client.post("/api/v1/bookings/quick", json=payload)
@@ -24,9 +25,9 @@ def _quick_book(client, **overrides):
 
 def test_version_is_060(authed):
     branding = authed.get("/api/v1/branding").json()
-    assert branding.get("app.version") == "0.6.0"
+    assert branding.get("app.version") == "0.7.0"
     diag = authed.get("/api/v1/diagnostics").json()
-    assert diag["version"] == "0.6.0"
+    assert diag["version"] == "0.7.0"
 
 
 def test_stage_ready_creates_in_app_notification(authed):

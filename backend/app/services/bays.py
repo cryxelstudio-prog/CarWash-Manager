@@ -247,6 +247,12 @@ def bay_board(db: Session, branch_id: int | None = None, active_only: bool = Tru
                 "stage": current.wash_stage,
                 "eta": _eta_for(current),
                 "staff": current.assigned_employee.full_name if current.assigned_employee else staff,
+                "payment_method_intent": current.payment_method_intent,
+                "pay_badge": (
+                    "SALARY" if current.payment_method_intent == "salary_deduction"
+                    else "CASH" if current.payment_method_intent == "cash"
+                    else (current.payment_method_intent or "").upper() or None
+                ),
             }
         items.append(
             {

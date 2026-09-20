@@ -127,7 +127,7 @@ DEFAULT_SETTINGS = [
     ("setup.completed", "false", "boolean", "system", "First-run completed"),
     ("loyalty.points_per_rand", "1", "number", "loyalty", "Points earned per R1"),
     ("hosting.cors_origins_extra", "", "string", "hosting", "Extra CORS origins (comma-separated) for Power Apps / LAN"),
-    ("app.version", "0.6.0", "string", "system", "Displayed app version"),
+    ("app.version", "0.7.0", "string", "system", "Displayed app version"),
     ("app.login_background_url", "", "string", "branding", "Optional login background image URL"),
     ("app.theme_default", "system", "string", "branding", "Default theme: light/dark/system"),
     ("launch.public_base_url", "", "string", "launch", "Public / reverse-proxy base URL for QR and invites"),
@@ -166,6 +166,8 @@ DEFAULT_SETTINGS = [
     ("outlook.smtp_from", "", "string", "outlook", "From address for SMTP"),
     ("outlook.last_status", "NOT_CONFIGURED", "string", "outlook", "Last connection status"),
     ("outlook.last_message", "", "string", "outlook", "Friendly last connection message"),
+    ("payments.allow_salary_deduction", "true", "boolean", "payments", "Allow salary deduction bookings (anyone with employee number)"),
+    ("payments.salary_monthly_cap", "", "number", "payments", "Soft monthly outstanding warning per employee number (empty = off)"),
 ]
 
 

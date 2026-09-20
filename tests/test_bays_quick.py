@@ -49,6 +49,7 @@ def test_quick_book_and_bay_busy(authed):
             "model": "Corolla",
             "registration": "GP12ABGP",
             "wash_bay_id": bay["id"],
+            "payment_method_intent": "cash",
         },
     )
     assert r.status_code == 201, r.text

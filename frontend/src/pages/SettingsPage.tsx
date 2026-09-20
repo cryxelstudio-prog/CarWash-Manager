@@ -45,6 +45,8 @@ export default function SettingsPage() {
           "vehicles.show_registration": branding["vehicles.show_registration"] || "false",
           "vehicles.require_registration": branding["vehicles.require_registration"] || "false",
           "vehicles.hide_registration": branding["vehicles.hide_registration"] || "true",
+          "payments.allow_salary_deduction": branding["payments.allow_salary_deduction"] ?? "true",
+          "payments.salary_monthly_cap": branding["payments.salary_monthly_cap"] || "",
         }),
       });
       applyAccent(branding["app.accent_colour"]);
@@ -253,6 +255,58 @@ export default function SettingsPage() {
       </div>
 
       <div className="card p-4 md:p-5 space-y-3 mb-4">
+        <h3 className="font-bold">Salary deduction</h3>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Anyone (including walk-ins) can choose salary deduction on Quick Book / mobile if they enter an <strong>employee number</strong>.
+          Cash does not need an employee number.
+        </p>
+        <label className="flex items-center gap-3 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={(branding["payments.allow_salary_deduction"] ?? "true").toLowerCase() !== "false"}
+            onChange={(e) => setBranding({ ...branding, "payments.allow_salary_deduction": e.target.checked ? "true" : "false" })}
+          />
+          Allow salary deduction bookings (default ON)
+        </label>
+        <div>
+          <label className="label">Monthly cap warning per employee (soft)</label>
+          <input
+            className="input"
+            type="number"
+            step="0.01"
+            placeholder="Leave empty for no warning"
+            value={branding["payments.salary_monthly_cap"] || ""}
+            onChange={(e) => setBranding({ ...branding, "payments.salary_monthly_cap": e.target.value })}
+          />
+          <p className="mt-1 text-xs text-slate-500">Warns when outstanding pending salary for that employee number exceeds this amount.</p>
+        </div>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={async () => {
+            setError("");
+            setMsg("");
+            try {
+              await api("/api/v1/branding", {
+                method: "PUT",
+                body: JSON.stringify({
+                  "payments.allow_salary_deduction": branding["payments.allow_salary_deduction"] ?? "true",
+                  "payments.salary_monthly_cap": branding["payments.salary_monthly_cap"] || "",
+                }),
+              });
+              await refresh();
+              setMsg("Salary deduction settings saved");
+            } catch (err) {
+              setError(err instanceof ApiError ? err.detail : "Save failed");
+            }
+          }}
+        >
+          Save salary settings
+        </button>
+      </div>
+
+      <div className="card p-4 md:p-5 space-y-3 mb-4">
         <h3 className="font-bold">Owner alerts & Outlook</h3>
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Configure who gets notified and optional Outlook email on the <strong>Launch</strong> page
@@ -267,7 +321,7 @@ export default function SettingsPage() {
           Use the <strong>Launch</strong> sidebar page for QR staff access, LAN, Outlook, Power Apps and SharePoint wizards.
           Guides: <code className="text-xs">docs/LAUNCH_GUIDE.txt</code>, <code className="text-xs">docs/HOSTING_OPTIONS.txt</code>.
         </p>
-        <p className="text-xs text-slate-500">App version 0.6.0 · Default currency ZAR · Africa/Johannesburg</p>
+        <p className="text-xs text-slate-500">App version 0.7.0 · Default currency ZAR · Africa/Johannesburg</p>
       </div>
     </div>
   );

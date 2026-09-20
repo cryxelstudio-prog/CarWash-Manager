@@ -10,6 +10,11 @@ from app.models import Booking, BookingItem, Customer, Package, Service, Vehicle
 from app.models.models import BookingStatus, PaymentStatus, WASH_STAGE_ORDER, WashStage
 from app.schemas.entities import BookingIn, StageMoveIn
 from app.services.audit import activity, audit
+from app.services.payment_intent import (
+    pay_badge as _pay_badge,
+    salary_cap_warning,
+    validate_payment_intent,
+)
 from app.utils.numbering import next_number, next_ticket_number
 from app.utils.vehicles import normalize_registration, vehicle_description
 
@@ -77,6 +82,10 @@ def serialize_booking(b: Booking) -> dict:
         "discount_amount": b.discount_amount,
         "total_amount": b.total_amount,
         "payment_status": b.payment_status,
+        "payment_method_intent": b.payment_method_intent,
+        "employee_number": b.employee_number,
+        "employee_department": b.employee_department,
+        "pay_badge": None,
         "customer_phone": b.customer_phone,
         "customer_email": b.customer_email,
         "arrived_at": b.arrived_at,
@@ -95,6 +104,8 @@ def serialize_booking(b: Booking) -> dict:
         "branch_name": b.branch.name if b.branch else None,
         "assignee_name": b.assigned_employee.full_name if b.assigned_employee else None,
         "bay_name": (b.wash_bay.name if b.wash_bay else None),
+        "pay_badge": _pay_badge(b.payment_method_intent),
+        "salary_cap_warning": getattr(b, "_salary_cap_warning", None),
     }
 
 
@@ -105,7 +116,28 @@ def create_booking(db: Session, data: BookingIn, user_id: int | None = None, use
         raise ValueError("Customer not found")
     if not veh or veh.is_deleted or veh.customer_id != cust.id:
         raise ValueError("Vehicle not found for customer")
+    # Anyone (including walk-ins) may use salary deduction with an employee number;
+    # prefer payload, else customer's stored employee_number.
+    emp_hint = getattr(data, "employee_number", None) or getattr(cust, "employee_number", None)
+    intent, emp_no, emp_dept = validate_payment_intent(
+        db,
+        payment_method_intent=getattr(data, "payment_method_intent", None),
+        employee_number=emp_hint,
+        employee_department=getattr(data, "employee_department", None),
+        require_intent=False,
+    )
+    if intent == "salary_deduction" and emp_no:
+        # Store on customer note + employee_number for walk-ins / anyone
+        cust.employee_number = emp_no
+        note_bits = [f"Salary deduction employee number: {emp_no}"]
+        if emp_dept:
+            note_bits.append(f"Department: {emp_dept}")
+        note_line = " | ".join(note_bits)
+        existing_notes = (cust.notes or "").strip()
+        if note_line not in existing_notes:
+            cust.notes = f"{existing_notes}\n{note_line}".strip() if existing_notes else note_line
     subtotal, tax, total, duration = _price_for(db, data)
+    cap_warn = salary_cap_warning(db, emp_no, extra=total) if intent == "salary_deduction" else None
     booking = Booking(
         booking_number=next_number(db, Booking, "booking_number", "BKG"),
         ticket_number=next_ticket_number(db, Booking),
@@ -133,6 +165,9 @@ def create_booking(db: Session, data: BookingIn, user_id: int | None = None, use
         discount_amount=Decimal(str(data.discount_amount or 0)),
         total_amount=total,
         payment_status=PaymentStatus.PENDING.value,
+        payment_method_intent=intent,
+        employee_number=emp_no,
+        employee_department=emp_dept,
         created_by_id=user_id,
     )
     db.add(booking)
@@ -191,7 +226,10 @@ def create_booking(db: Session, data: BookingIn, user_id: int | None = None, use
         maybe_alert_booking_created(db, booking, user_id=user_id)
     except Exception:  # noqa: BLE001
         pass
-    return get_booking(db, booking.id)
+    result = get_booking(db, booking.id)
+    if cap_warn and result is not None:
+        result._salary_cap_warning = cap_warn  # type: ignore[attr-defined]
+    return result
 
 
 def get_booking(db: Session, booking_id: int) -> Booking | None:
@@ -273,6 +311,13 @@ def move_stage(db: Session, booking_id: int, data: StageMoveIn, user_id: int | N
     from app.services.bays import sync_bay_occupancy
     sync_bay_occupancy(db, booking.wash_bay_id)
     booking = get_booking(db, booking.id)
+    if to_stage in (WashStage.READY, WashStage.COLLECTED):
+        try:
+            from app.services.payments import ensure_salary_pending_for_booking
+            ensure_salary_pending_for_booking(db, booking, user_id=user_id, username=username)
+            booking = get_booking(db, booking.id)
+        except Exception:  # noqa: BLE001
+            pass
     try:
         from app.services.owner_alerts import maybe_alert_for_stage
         maybe_alert_for_stage(db, booking, to_stage.value, user_id=user_id)
@@ -372,6 +417,14 @@ def quick_book(db: Session, data, user_id: int | None = None, username: str | No
         if reg and not vehicle.registration:
             vehicle.registration = reg
 
+    # Quick Book / mobile / Easy Mode: require payment intent (Cash or Salary deduction)
+    intent, emp_no, emp_dept = validate_payment_intent(
+        db,
+        payment_method_intent=getattr(data, "payment_method_intent", None),
+        employee_number=getattr(data, "employee_number", None) or getattr(customer, "employee_number", None),
+        employee_department=getattr(data, "employee_department", None),
+        require_intent=True,
+    )
     payload = BookingIn(
         customer_id=customer.id,
         vehicle_id=vehicle.id,
@@ -384,5 +437,8 @@ def quick_book(db: Session, data, user_id: int | None = None, username: str | No
         source=data.source or "WALK_IN",
         notes=data.notes,
         customer_phone=data.customer_phone or customer.phone,
+        payment_method_intent=intent,
+        employee_number=emp_no,
+        employee_department=emp_dept,
     )
     return create_booking(db, payload, user_id=user_id, username=username)

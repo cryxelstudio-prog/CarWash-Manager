@@ -25,3 +25,20 @@ Bay status uses plain words: "Bay free" / "Bay busy".
 When booking, confirm with "Yes, book it" or "Cancel".
 
 Your choice is saved on your user account and remembered next time.
+
+Cash vs salary deduction (v0.7.0)
+---------------------------------
+When booking via Quick Book, Easy Mode or phone (/m), choose how the customer will pay:
+
+1. Cash — pay at the bay (no employee number needed).
+2. Salary deduction — billed at month end. Anyone can choose this (including walk-ins)
+   as long as they enter an employee number. Optional department can be stored.
+
+When the wash is marked ready, salary-deduction bookings create a pending payroll row.
+Managers export a CSV from Payments → Payroll export (default: current month), then mark
+the batch as deducted/paid. Toggle “Allow salary deduction” and an optional monthly cap
+warning under Settings.
+
+Queue and bay cards show a CASH or SALARY badge. Receipts say “Cash – pay at bay” or
+“Salary deduction – billed at month end”. Card/EFT/account/voucher remain available on
+the full Payments screen.
