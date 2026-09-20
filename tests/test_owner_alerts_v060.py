@@ -23,7 +23,7 @@ def _quick_book(client, **overrides):
     return r.json()
 
 
-def test_version_is_060(authed):
+def test_version_is_semver(authed):
     branding = authed.get("/api/v1/branding").json()
     assert branding.get("app.version") == "0.7.0"
     diag = authed.get("/api/v1/diagnostics").json()
