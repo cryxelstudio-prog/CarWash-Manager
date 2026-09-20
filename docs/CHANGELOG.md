@@ -69,3 +69,6 @@
 - Initial production-capable local release.
 - First-run wizard, RBAC, bookings + wash queue, payments/PDF, inventory, reports, backup/restore.
 - Integration centre with Not Configured adapters for M365/SharePoint/Power Apps/notifications/payments.
+
+## 0.7.1
+- Hotfix: allow bookings without registration plates (SQLite migration makes vehicles.registration nullable).

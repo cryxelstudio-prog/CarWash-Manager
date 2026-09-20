@@ -121,6 +121,54 @@ def ensure_schema_patches() -> None:
             if "employee_number" not in ccols:
                 conn.execute(text("ALTER TABLE customers ADD COLUMN employee_number VARCHAR(64)"))
 
+        # v0.7.1 — vehicles.registration must be nullable (boss: no plates required)
+        if "vehicles" in tables:
+            vinfo = conn.execute(text("PRAGMA table_info(vehicles)")).fetchall()
+            # row: cid, name, type, notnull, dflt_value, pk
+            reg = next((r for r in vinfo if r[1] == "registration"), None)
+            if reg is not None and int(reg[3]) == 1:
+                conn.execute(text("PRAGMA foreign_keys=OFF"))
+                conn.execute(text(
+                    """
+                    CREATE TABLE vehicles_new (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        customer_id INTEGER NOT NULL,
+                        registration VARCHAR(32),
+                        make VARCHAR(64),
+                        model VARCHAR(64),
+                        colour VARCHAR(64),
+                        year INTEGER,
+                        size VARCHAR(32) NOT NULL,
+                        vin VARCHAR(64),
+                        notes TEXT,
+                        is_active BOOLEAN NOT NULL,
+                        created_at DATETIME NOT NULL,
+                        updated_at DATETIME NOT NULL,
+                        is_deleted BOOLEAN NOT NULL,
+                        deleted_at DATETIME,
+                        archived BOOLEAN NOT NULL,
+                        FOREIGN KEY(customer_id) REFERENCES customers (id)
+                    )
+                    """
+                ))
+                conn.execute(text(
+                    """
+                    INSERT INTO vehicles_new (
+                        id, customer_id, registration, make, model, colour, year, size, vin, notes,
+                        is_active, created_at, updated_at, is_deleted, deleted_at, archived
+                    )
+                    SELECT
+                        id, customer_id, registration, make, model, colour, year, size, vin, notes,
+                        is_active, created_at, updated_at, is_deleted, deleted_at, archived
+                    FROM vehicles
+                    """
+                ))
+                conn.execute(text("DROP TABLE vehicles"))
+                conn.execute(text("ALTER TABLE vehicles_new RENAME TO vehicles"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_vehicles_customer_id ON vehicles (customer_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_vehicles_registration ON vehicles (registration)"))
+                conn.execute(text("PRAGMA foreign_keys=ON"))
+
 
 def init_db() -> None:
     """Create tables if needed (Alembic preferred; fallback for smoke)."""
