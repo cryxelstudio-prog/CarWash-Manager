@@ -1,6 +1,6 @@
 Car Wash Manager — Outlook / Microsoft 365 setup (OPTIONAL)
 ============================================================
-Version 0.7.0
+Version 0.8.0
 
 You do NOT need Outlook or Azure to run the car wash app.
 The in-app Calendar (Day / Week / Month / Agenda) is always the source of truth.

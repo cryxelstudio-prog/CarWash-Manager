@@ -34,6 +34,9 @@ OWNER_KEYS = [
     "owner.alert.cancelled",
     "owner.alert.no_show",
     "owner.alert.email_when_ready",
+    "customer.alert.email_when_done",
+    "customer.alert.ready_subject",
+    "customer.alert.ready_template",
 ]
 
 OUTLOOK_KEYS = [
@@ -333,16 +336,21 @@ def save_launch_platform(db: Session, platform: str, fields: dict[str, Any]) -> 
             "cancelled": "owner.alert.cancelled",
             "no_show": "owner.alert.no_show",
             "email_when_ready": "owner.alert.email_when_ready",
+            "customer.alert.email_when_done": "customer.alert.email_when_done",
+            "customer.alert.ready_subject": "customer.alert.ready_subject",
+            "customer.alert.ready_template": "customer.alert.ready_template",
+            "email_car_owner_when_done": "customer.alert.email_when_done",
         }
         for k, v in fields.items():
             key = mapping.get(k)
             if not key:
                 continue
-            if key.startswith("owner.alert."):
+            if key.startswith("owner.alert.") or key == "customer.alert.email_when_done":
                 val = "true" if str(v).lower() in ("1", "true", "yes", "on") else "false"
             else:
                 val = "" if v is None else str(v).strip()
-            set_setting(db, key, val, category="owner")
+            cat = "customer" if key.startswith("customer.") else "owner"
+            set_setting(db, key, val, category=cat)
         # Keep outlook mailbox in sync when owner email set
         email = (get_setting(db, "owner.email") or "").strip()
         if email and not (get_setting(db, "outlook.owner_mailbox") or "").strip():

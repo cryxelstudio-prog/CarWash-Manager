@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0 — 2026-09-20
+- **Mobile polish** — `/m`, Easy Mode, Queue, Quick Book and Bays: cleaner cards, professional header with logo, soft empty states (“No cars waiting — nice and quiet”), large touch targets kept.
+- **Done / Mark complete** — primary Done on Queue cards, Bay board and mobile jobs. Optional message to car owner → confirm “Yes, car is ready” → stage READY + wash complete.
+- **Customer email** — if booking/customer has email (optional Quick Book field) and **Email car owner when wash done** is ON, sends “Your car is ready” via existing Graph/SMTP adapters; always creates in-app notification; friendly “Saved — no customer email on file” when absent. Offline-first (Done succeeds even if email fails).
+- **Bay colours** — Available green · Busy/booked amber with pulse · Ready blue · Offline/Closed grey. Easy labels: Bay free / Bay busy / Ready.
+- **Roles & permissions** — Admin, Manager, Senior Tech (Supervisor), Reception, Operator, Detailer, etc. User management (create/edit/activate) for Admin / Manager / Senior Tech. Settings, Launch, Integrations, Admin, Diagnostics, Reports API-gated — frontline staff never see backend settings on mobile/Easy Mode.
+- Version bump to 0.8.0.
+
 ## 0.7.0 — 2026-09-20
 - **Booking payment intent** — Quick Book, Easy Mode and `/m` require **How will you pay?** with large **Cash** / **Salary deduction** buttons (More… for card / EFT / account / other).
 - **Anyone can use salary deduction** (including walk-ins) if they enter an **employee number**; cash does not need one. Validated server-side with a clear error when missing.

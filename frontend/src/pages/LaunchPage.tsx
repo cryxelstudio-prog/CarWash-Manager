@@ -91,6 +91,7 @@ export default function LaunchPage() {
         fields["outlook.owner_mailbox"] = data.settings?.["owner.email"] || "";
       }
       if (!fields["owner.alert.email_when_ready"]) fields["owner.alert.email_when_ready"] = "true";
+      if (!fields["customer.alert.email_when_done"]) fields["customer.alert.email_when_done"] = "true";
     }
     if (active === "owner_alerts") {
       if (!fields["owner.email"]) fields["owner.email"] = data.settings?.["outlook.owner_mailbox"] || "";
@@ -322,6 +323,15 @@ export default function LaunchPage() {
         {toggle("owner.alert.booking_created", "Booking created")}
         {toggle("owner.alert.cancelled", "Cancelled")}
         {toggle("owner.alert.no_show", "No-show")}
+      </div>
+      <div className="rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-950/20 p-3 space-y-2">
+        <div className="font-semibold text-sm">Customer (car owner) email</div>
+        {toggle(
+          "customer.alert.email_when_done",
+          "Email car owner when wash done",
+          "When staff tap Done — uses customer email on the booking"
+        )}
+        {field("customer.alert.ready_subject", "Customer email subject", undefined, "Your car is ready")}
       </div>
       <button className="btn-primary !min-h-[48px] !px-6">Save owner alerts</button>
     </form>

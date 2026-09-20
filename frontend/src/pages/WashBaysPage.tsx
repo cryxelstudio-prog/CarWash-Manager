@@ -1,12 +1,18 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import PageHeader from "../components/ui/PageHeader";
 import BayStatusCard, { BayBoardItem } from "../components/BayStatusCard";
+import DoneCompleteModal from "../components/DoneCompleteModal";
+import EmptyState from "../components/ui/EmptyState";
 import { api, ApiError } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import { useEasyMode } from "../hooks/useEasyMode";
 import { GripVertical, Plus, Pencil, Trash2 } from "lucide-react";
 
 export default function WashBaysPage() {
   const { has } = useAuth();
+  const { easyMode } = useEasyMode();
+  const [doneTarget, setDoneTarget] = useState<{ id: number; ticket?: string | null; vehicle?: string | null } | null>(null);
+  const [toast, setToast] = useState("");
   const [items, setItems] = useState<BayBoardItem[]>([]);
   const [manage, setManage] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
@@ -121,8 +127,8 @@ export default function WashBaysPage() {
   return (
     <div>
       <PageHeader
-        title="Bay Board"
-        subtitle="Live status for your configured wash bays"
+        title={easyMode ? "Bays" : "Bay Board"}
+        subtitle={easyMode ? "Green = free · Orange = busy · Blue = ready" : "Live status — colours show free / busy / ready"}
         actions={
           <div className="flex flex-wrap gap-2">
             <button className="btn-secondary" onClick={() => load()}>Refresh</button>
@@ -136,6 +142,7 @@ export default function WashBaysPage() {
       />
       {error && <div className="mb-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40">{error}</div>}
       {msg && <div className="mb-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{msg}</div>}
+      {toast && <div className="mb-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 px-4 py-3 text-sm text-emerald-800 font-medium">{toast}</div>}
 
       {showManage && canConfig && (
         <div className="card p-4 mb-4 space-y-3">
@@ -240,14 +247,32 @@ export default function WashBaysPage() {
             key={bay.id}
             bay={bay}
             onSetStatus={canManage ? (s) => setStatus(bay.id, s) : undefined}
+            onDone={(bookingId, ticket, vehicle) => setDoneTarget({ id: bookingId, ticket, vehicle })}
           />
         ))}
       </div>
       {items.length === 0 && !error && (
-        <div className="card p-8 text-center text-slate-500">
-          No active bays. {canConfig ? "Open Customise bays to add or enable wash bays." : "Ask a manager to configure bays."}
-        </div>
+        <EmptyState
+          title="No bays set up yet"
+          hint={canConfig ? "Open Customise bays to add Bay 1, Bay 2, or more." : "Ask a manager to configure wash bays."}
+        />
       )}
+      <DoneCompleteModal
+        open={!!doneTarget}
+        ticket={doneTarget?.ticket}
+        vehicle={doneTarget?.vehicle}
+        onClose={() => setDoneTarget(null)}
+        onConfirm={async (message) => {
+          if (!doneTarget) return;
+          const res = await api<any>(`/api/v1/bookings/${doneTarget.id}/stage`, {
+            method: "POST",
+            body: JSON.stringify({ to_stage: "READY", customer_message: message || null, notify_customer: true }),
+          });
+          setToast(res?.customer_notify?.message || "Saved — marked ready");
+          setTimeout(() => setToast(""), 5000);
+          await load();
+        }}
+      />
       <p className="mt-4 text-xs text-slate-500">
         Busy is set automatically when a wash is assigned to a bay. Managers can force Offline / Closed.
       </p>

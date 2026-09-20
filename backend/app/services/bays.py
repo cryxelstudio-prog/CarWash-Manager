@@ -19,12 +19,14 @@ BUSY_STAGES = {
     WashStage.CHECK_IN.value,
 }
 
+# Collected / cancelled leave the bay; READY stays visible (blue "ready for collection")
 TERMINAL_STAGES = {
-    WashStage.READY.value,
     WashStage.COLLECTED.value,
     WashStage.CANCELLED.value,
     WashStage.NO_SHOW.value,
 }
+
+READY_STAGE = WashStage.READY.value
 
 
 def ensure_default_bays(db: Session) -> None:
@@ -221,7 +223,14 @@ def bay_board(db: Session, branch_id: int | None = None, active_only: bool = Tru
                 .first()
             )
         display_status = bay.status or BayStatus.AVAILABLE.value
-        if current and current.wash_stage in BUSY_STAGES and not bay.status_locked:
+        if bay.status_locked and bay.status in (BayStatus.OFFLINE.value, BayStatus.CLOSED.value):
+            display_status = bay.status
+        elif current and current.wash_stage == READY_STAGE:
+            display_status = "READY"
+        elif current and not bay.status_locked:
+            # Any assigned active/booked wash shows busy (amber)
+            display_status = BayStatus.BUSY.value
+        elif current and current.wash_stage in BUSY_STAGES and not bay.status_locked:
             display_status = BayStatus.BUSY.value
         staff = None
         if bay.assigned_employee:
@@ -242,6 +251,7 @@ def bay_board(db: Session, branch_id: int | None = None, active_only: bool = Tru
                 "model": veh.model if veh else None,
                 "customer": current.customer.full_name if current.customer else None,
                 "customer_phone": current.customer_phone or (current.customer.phone if current.customer else None),
+                "customer_email": current.customer_email or (current.customer.email if current.customer else None),
                 "service": (current.service.name if current.service else None)
                 or (current.package.name if current.package else None),
                 "stage": current.wash_stage,
@@ -271,4 +281,5 @@ def bay_board(db: Session, branch_id: int | None = None, active_only: bool = Tru
                 "current_vehicle": vehicle,
             }
         )
-    return {"items": items, "total": len(items), "statuses": [s.value for s in BayStatus]}
+    statuses = [s.value for s in BayStatus] + ["READY"]
+    return {"items": items, "total": len(items), "statuses": list(dict.fromkeys(statuses))}

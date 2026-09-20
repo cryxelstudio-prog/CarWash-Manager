@@ -47,13 +47,25 @@ PERMISSIONS = [
     ("settings.manage", "Manage Settings", "settings"),
     ("integrations.view", "View Integrations", "integrations"),
     ("admin.manage", "Admin Access", "admin"),
+    ("users.manage", "Manage Users & Roles", "admin"),
     ("audit.view", "View Audit Log", "admin"),
     ("backup.manage", "Backup & Restore", "admin"),
 ]
 
 ROLE_DEFS = [
+    # Platform / ownership
     ("super_admin", "Super Admin", True, ["*"]),
     ("owner", "Owner", True, ["*"]),
+    ("admin", "Admin", True, [
+        "dashboard.view", "bookings.view", "bookings.manage", "queue.manage",
+        "customers.view", "customers.manage", "vehicles.view", "vehicles.manage",
+        "services.view", "services.manage", "employees.view", "employees.manage",
+        "attendance.manage", "payments.view", "payments.manage", "invoices.manage",
+        "cashup.manage", "expenses.manage", "inventory.view", "inventory.manage",
+        "suppliers.manage", "reports.view", "reports.export", "branches.manage",
+        "notifications.view", "settings.manage", "integrations.view",
+        "admin.manage", "users.manage", "audit.view", "backup.manage",
+    ]),
     ("manager", "Manager", True, [
         "dashboard.view", "bookings.view", "bookings.manage", "queue.manage",
         "customers.view", "customers.manage", "vehicles.view", "vehicles.manage",
@@ -61,14 +73,23 @@ ROLE_DEFS = [
         "attendance.manage", "payments.view", "payments.manage", "invoices.manage",
         "cashup.manage", "expenses.manage", "inventory.view", "inventory.manage",
         "suppliers.manage", "reports.view", "reports.export", "branches.manage",
-        "notifications.view", "settings.manage", "integrations.view", "audit.view",
+        "notifications.view", "settings.manage", "integrations.view",
+        "users.manage", "audit.view",
+    ]),
+    # Floor leadership — can manage users, not backend Launch/Settings
+    ("senior_tech", "Senior Tech", True, [
+        "dashboard.view", "bookings.view", "bookings.manage", "queue.manage",
+        "customers.view", "customers.manage", "vehicles.view", "vehicles.manage",
+        "services.view", "employees.view", "attendance.manage", "payments.view",
+        "payments.manage", "inventory.view", "notifications.view", "users.manage",
     ]),
     ("supervisor", "Supervisor", True, [
         "dashboard.view", "bookings.view", "bookings.manage", "queue.manage",
         "customers.view", "customers.manage", "vehicles.view", "vehicles.manage",
         "services.view", "employees.view", "attendance.manage", "payments.view",
-        "payments.manage", "inventory.view", "reports.view", "notifications.view",
+        "payments.manage", "inventory.view", "notifications.view", "users.manage",
     ]),
+    # Frontline staff — ops only (no Settings / Launch / Admin / Reports)
     ("reception", "Reception", True, [
         "dashboard.view", "bookings.view", "bookings.manage", "queue.manage",
         "customers.view", "customers.manage", "vehicles.view", "vehicles.manage",
@@ -79,7 +100,7 @@ ROLE_DEFS = [
         "invoices.manage", "cashup.manage", "customers.view", "notifications.view",
     ]),
     ("operator", "Operator", True, [
-        "dashboard.view", "queue.manage", "bookings.view", "notifications.view",
+        "dashboard.view", "queue.manage", "bookings.view", "bookings.manage", "notifications.view",
     ]),
     ("detailer", "Detailer", True, [
         "dashboard.view", "queue.manage", "bookings.view", "notifications.view",
@@ -127,7 +148,7 @@ DEFAULT_SETTINGS = [
     ("setup.completed", "false", "boolean", "system", "First-run completed"),
     ("loyalty.points_per_rand", "1", "number", "loyalty", "Points earned per R1"),
     ("hosting.cors_origins_extra", "", "string", "hosting", "Extra CORS origins (comma-separated) for Power Apps / LAN"),
-    ("app.version", "0.7.0", "string", "system", "Displayed app version"),
+    ("app.version", "0.8.0", "string", "system", "Displayed app version"),
     ("app.login_background_url", "", "string", "branding", "Optional login background image URL"),
     ("app.theme_default", "system", "string", "branding", "Default theme: light/dark/system"),
     ("launch.public_base_url", "", "string", "launch", "Public / reverse-proxy base URL for QR and invites"),
@@ -152,6 +173,9 @@ DEFAULT_SETTINGS = [
     ("owner.alert.cancelled", "true", "boolean", "owner", "Notify when a booking is cancelled"),
     ("owner.alert.no_show", "true", "boolean", "owner", "Notify on customer no-show"),
     ("owner.alert.email_when_ready", "true", "boolean", "owner", "Email owner when car ready/complete (if Outlook configured)"),
+    ("customer.alert.email_when_done", "true", "boolean", "customer", "Email car owner (customer) when wash marked Done/READY"),
+    ("customer.alert.ready_subject", "Your car is ready", "string", "customer", "Subject prefix for customer ready email"),
+    ("customer.alert.ready_template", "Hi {customer_name},\n\nGood news — your car is ready for collection.\n\nTicket: {ticket}\nVehicle: {vehicle}\nBay: {bay}\n\n{custom_message}Thank you for choosing us.\n", "string", "customer", "Customer ready email body template"),
     ("outlook.mode", "disabled", "string", "outlook", "disabled | graph | smtp"),
     ("outlook.connect_calendar", "false", "boolean", "outlook", "Connect Outlook calendar (master toggle)"),
     ("outlook.sync_calendar", "false", "boolean", "outlook", "Best-effort sync bookings to Outlook calendar"),

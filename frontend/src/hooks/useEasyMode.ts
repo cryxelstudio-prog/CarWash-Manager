@@ -8,13 +8,13 @@ const LS_HC_KEY = "cwm_high_contrast";
 const LS_LOGIN_KEY = "cwm_easy_mode_login";
 
 function roleKey(roleName?: string | null): string {
-  return (roleName || "").toLowerCase();
+  return (roleName || "").toLowerCase().replace(/\s+/g, "_");
 }
 
 /** Frontline roles seed Easy when preference is unset. */
 function staffDefaultsEasy(roleName?: string | null): boolean {
   const r = roleKey(roleName);
-  return ["reception", "operator", "washer", "staff"].some((k) => r.includes(k));
+  return ["reception", "operator", "washer", "staff", "detailer", "cashier"].some((k) => r.includes(k));
 }
 
 export function readLoginEasyPref(defaultChecked = true): boolean {
@@ -36,11 +36,6 @@ export function writeLoginEasyPref(value: boolean) {
   }
 }
 
-/**
- * Resolve effective Easy Mode.
- * Accessibility-first: unset preference leans Easy for every role (including managers).
- * Explicit false always means Full Mode.
- */
 function resolveEasy(
   stored: boolean | null | undefined,
   roleName: string | null | undefined,
@@ -57,11 +52,11 @@ function resolveEasy(
   }
   if (mobileLean) return true;
   if (staffDefaultsEasy(roleName)) return true;
-  return true; // accessibility-first for Owner/Manager/Admin when unset
+  return true;
 }
 
 export function useEasyMode() {
-  const { user, patchUser } = useAuth();
+  const { user, patchUser, has } = useAuth();
   const mobileLean =
     typeof window !== "undefined" &&
     (window.location.pathname === "/m" || window.location.pathname.startsWith("/m/"));
@@ -108,7 +103,7 @@ export function useEasyMode() {
         });
         patchUser({ easy_mode: session.user.easy_mode });
       } catch {
-        // keep optimistic local value; localStorage already set
+        // keep optimistic local value
       }
     },
     [user, patchUser]
@@ -123,12 +118,42 @@ export function useEasyMode() {
     }
   }, []);
 
+  const r = roleKey(user?.role_name);
+  const isSuper = !!(user?.is_super_admin || user?.permissions?.includes("*"));
+
   const isManagerLike = useMemo(() => {
     if (!user) return false;
-    if (user.is_super_admin || user.permissions.includes("*")) return true;
-    const r = roleKey(user.role_name);
-    return ["owner", "manager", "admin"].some((k) => r.includes(k));
-  }, [user]);
+    if (isSuper) return true;
+    if (has("settings.manage") || has("users.manage") || has("admin.manage")) return true;
+    return ["owner", "manager", "admin", "senior_tech", "supervisor"].some((k) => r.includes(k));
+  }, [user, isSuper, has, r]);
+
+  /** Settings / Launch / Integrations / Branding / Diagnostics */
+  const canAccessSettings = useMemo(() => {
+    if (!user) return false;
+    if (isSuper) return true;
+    return has("settings.manage") || has("admin.manage");
+  }, [user, isSuper, has]);
+
+  /** User management panel */
+  const canManageUsers = useMemo(() => {
+    if (!user) return false;
+    if (isSuper) return true;
+    return has("users.manage") || has("admin.manage");
+  }, [user, isSuper, has]);
+
+  const canViewReports = useMemo(() => {
+    if (!user) return false;
+    if (isSuper) return true;
+    return has("reports.view") || has("reports.export");
+  }, [user, isSuper, has]);
+
+  /** Frontline wash staff — ops-only nav */
+  const isFrontlineStaff = useMemo(() => {
+    if (!user) return false;
+    if (isSuper || canAccessSettings || canManageUsers) return false;
+    return ["reception", "operator", "detailer", "cashier", "washer", "staff"].some((k) => r.includes(k));
+  }, [user, isSuper, canAccessSettings, canManageUsers, r]);
 
   return {
     easyMode,
@@ -136,5 +161,9 @@ export function useEasyMode() {
     highContrast,
     setHighContrast,
     isManagerLike,
+    canAccessSettings,
+    canManageUsers,
+    canViewReports,
+    isFrontlineStaff,
   };
 }

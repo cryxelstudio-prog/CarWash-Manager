@@ -74,12 +74,22 @@ def test_quick_book_and_bay_busy(authed):
     # Plate still stored when provided, but not primary
     assert bay1["current_vehicle"]["registration"] == "GP12ABGP"
 
-    # Free bay
+    # Ready for collection — bay stays visible in blue READY state (v0.8.0)
     done = authed.post(f"/api/v1/bookings/{booking['id']}/stage", json={"to_stage": "READY"})
     assert done.status_code == 200
     board2 = authed.get("/api/v1/wash-bays/board").json()
     bay1b = next(b for b in board2["items"] if b["id"] == bay["id"])
-    assert bay1b["status"] == "AVAILABLE"
+    assert bay1b["status"] == "READY"
+    assert bay1b["current_vehicle"] is not None
+    assert bay1b["current_vehicle"]["stage"] == "READY"
+
+    # Collected frees the bay
+    collected = authed.post(f"/api/v1/bookings/{booking['id']}/stage", json={"to_stage": "COLLECTED"})
+    assert collected.status_code == 200
+    board3 = authed.get("/api/v1/wash-bays/board").json()
+    bay1c = next(b for b in board3["items"] if b["id"] == bay["id"])
+    assert bay1c["status"] == "AVAILABLE"
+    assert bay1c["current_vehicle"] is None
 
 
 def test_dashboard_includes_bays(authed):

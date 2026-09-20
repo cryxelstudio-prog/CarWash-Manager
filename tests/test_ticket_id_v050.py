@@ -5,7 +5,7 @@ def test_default_settings_hide_registration(authed):
     branding = authed.get("/api/v1/branding").json()
     assert branding.get("vehicles.show_registration") in (None, "false", False)
     assert branding.get("vehicles.require_registration") in (None, "false", False)
-    assert branding.get("app.version") == "0.7.0"
+    assert str(branding.get("app.version", "")).startswith("0.8")
 
 
 def test_vehicle_requires_description_not_plate(authed):

@@ -10,7 +10,7 @@ def _branch_service(authed):
 
 def test_version_070(authed):
     branding = authed.get("/api/v1/branding").json()
-    assert branding.get("app.version") == "0.7.0"
+    assert str(branding.get("app.version", "")).startswith("0.8")
 
 
 def test_quick_book_requires_payment_intent(authed):

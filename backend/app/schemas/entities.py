@@ -201,6 +201,9 @@ class StageMoveIn(BaseModel):
     notes: str | None = None
     employee_id: int | None = None
     wash_bay_id: int | None = None
+    # v0.8.0 — optional personal note to car owner when marking Done / READY
+    customer_message: str | None = None
+    notify_customer: bool | None = True
 
 
 class PaymentIn(BaseModel):
@@ -361,6 +364,7 @@ class QuickBookIn(BaseModel):
     customer_id: int | None = None
     customer_name: str | None = None
     customer_phone: str | None = None
+    customer_email: str | None = None
     colour: str | None = None
     make: str | None = None
     model: str | None = None

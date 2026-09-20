@@ -55,12 +55,13 @@ const easyPrimary = [
   { to: "/help", label: "Help", icon: HelpCircle },
 ];
 
-/** Essential manager actions kept available in Easy Mode (large & simple) */
-const easyManagerExtras = [
-  { to: "/services", label: "Prices", icon: Banknote },
-  { to: "/reports", label: "Today's money", icon: BarChart3 },
-  { to: "/employees", label: "Staff", icon: UserCog },
-  { to: "/settings", label: "Settings", icon: Settings },
+/** Essential manager actions — filtered by role at render time */
+const easyManagerExtrasAll = [
+  { to: "/services", label: "Prices", icon: Banknote, need: "services" as const },
+  { to: "/reports", label: "Today's money", icon: BarChart3, need: "reports" as const },
+  { to: "/employees", label: "Staff", icon: UserCog, need: "staff" as const },
+  { to: "/admin", label: "Users", icon: Shield, need: "users" as const },
+  { to: "/settings", label: "Settings", icon: Settings, need: "settings" as const },
 ];
 
 const mobilePrimary = [
@@ -80,10 +81,13 @@ const easyMobilePrimary = [
 ];
 
 export default function AppShell() {
-  const { user, logout } = useAuth();
+  const { user, logout, has } = useAuth();
   const { theme, setTheme } = useTheme();
   const { appName, logoUrl, version, accent } = useBranding();
-  const { easyMode, setEasyMode, highContrast, setHighContrast, isManagerLike } = useEasyMode();
+  const {
+    easyMode, setEasyMode, highContrast, setHighContrast,
+    isManagerLike, canAccessSettings, canManageUsers, canViewReports, isFrontlineStaff,
+  } = useEasyMode();
   const [open, setOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -110,12 +114,41 @@ export default function AppShell() {
       isActive ? "bg-brand-600 text-white shadow-md shadow-brand-600/30" : "text-slate-300 hover:bg-slate-800/80"
     }`;
 
-  const sidebarItems = easyMode
+
+  const navAllowed = (to: string): boolean => {
+    // Backend settings — Admin / Manager only (settings.manage)
+    if (["/settings", "/launch", "/integrations", "/diagnostics", "/backup", "/branches"].includes(to)) {
+      return canAccessSettings;
+    }
+    if (to === "/admin" || to === "/audit") {
+      return canManageUsers || has("admin.manage") || has("audit.view");
+    }
+    if (to === "/reports") return canViewReports;
+    if (to === "/payments") return has("payments.view") || has("payments.manage") || canAccessSettings;
+    if (to === "/employees" || to === "/attendance") {
+      return has("employees.view") || has("employees.manage") || has("attendance.manage") || canManageUsers;
+    }
+    if (isFrontlineStaff && ["/inventory", "/suppliers", "/expenses", "/cashup", "/invoices"].includes(to)) {
+      return false;
+    }
+    return true;
+  };
+
+  const easyManagerExtras = easyManagerExtrasAll.filter((item) => {
+    if (item.need === "settings") return canAccessSettings;
+    if (item.need === "users") return canManageUsers;
+    if (item.need === "reports") return canViewReports;
+    if (item.need === "staff") return has("employees.view") || has("employees.manage") || canManageUsers;
+    return true;
+  });
+
+  const sidebarItems = (easyMode
     ? [
         ...easyPrimary,
         ...(isManagerLike ? easyManagerExtras : []),
       ]
-    : nav;
+    : nav
+  ).filter((item) => navAllowed(item.to));
 
   const bottomItems = easyMode ? easyMobilePrimary : mobilePrimary;
 
@@ -311,6 +344,7 @@ export default function AppShell() {
             <div className="grid grid-cols-3 gap-2">
               {nav
                 .filter((n) => !mobilePrimary.some((m) => m.to === n.to))
+                .filter((n) => navAllowed(n.to))
                 .map((item) => (
                   <button
                     key={item.to}

@@ -106,6 +106,7 @@ def serialize_booking(b: Booking) -> dict:
         "bay_name": (b.wash_bay.name if b.wash_bay else None),
         "pay_badge": _pay_badge(b.payment_method_intent),
         "salary_cap_warning": getattr(b, "_salary_cap_warning", None),
+        "customer_notify": getattr(b, "_customer_notify", None),
     }
 
 
@@ -323,7 +324,22 @@ def move_stage(db: Session, booking_id: int, data: StageMoveIn, user_id: int | N
         maybe_alert_for_stage(db, booking, to_stage.value, user_id=user_id)
     except Exception:  # noqa: BLE001
         pass
-    return get_booking(db, booking.id)
+    customer_notify = None
+    if to_stage == WashStage.READY and getattr(data, "notify_customer", True) is not False:
+        try:
+            from app.services.customer_alerts import notify_customer_car_ready
+            customer_notify = notify_customer_car_ready(
+                db,
+                booking=booking,
+                custom_message=getattr(data, "customer_message", None),
+                user_id=user_id,
+            )
+        except Exception:  # noqa: BLE001
+            customer_notify = {"in_app": False, "message": "Saved — notification skipped", "email_status": "SKIPPED"}
+    result = get_booking(db, booking.id)
+    if customer_notify is not None and result is not None:
+        result._customer_notify = customer_notify  # type: ignore[attr-defined]
+    return result
 
 
 def quick_book(db: Session, data, user_id: int | None = None, username: str | None = None) -> Booking:
@@ -341,6 +357,9 @@ def quick_book(db: Session, data, user_id: int | None = None, username: str | No
         customer = db.get(Customer, data.customer_id)
         if not customer or customer.is_deleted:
             raise ValueError("Customer not found")
+        em = (getattr(data, "customer_email", None) or "").strip()
+        if em:
+            customer.email = customer.email or em
     else:
         name = (data.customer_name or "").strip()
         phone = (data.customer_phone or "").strip()
@@ -356,16 +375,22 @@ def quick_book(db: Session, data, user_id: int | None = None, username: str | No
             parts = name.split(None, 1)
             first = parts[0]
             last = parts[1] if len(parts) > 1 else "."
+            email = (getattr(data, "customer_email", None) or "").strip() or None
             customer = Customer(
                 customer_number=next_number(db, Customer, "customer_number", "CUS"),
                 first_name=first,
                 last_name=last,
                 phone=phone,
+                email=email,
                 preferred_branch_id=data.branch_id,
                 is_active=True,
             )
             db.add(customer)
             db.flush()
+        elif getattr(data, "customer_email", None):
+            em = (data.customer_email or "").strip()
+            if em and not customer.email:
+                customer.email = em
 
     # Vehicle: match by optional plate, else colour+make+model+size, else create
     colour = (data.colour or "").strip() or None
@@ -437,6 +462,7 @@ def quick_book(db: Session, data, user_id: int | None = None, username: str | No
         source=data.source or "WALK_IN",
         notes=data.notes,
         customer_phone=data.customer_phone or customer.phone,
+        customer_email=(getattr(data, "customer_email", None) or customer.email),
         payment_method_intent=intent,
         employee_number=emp_no,
         employee_department=emp_dept,

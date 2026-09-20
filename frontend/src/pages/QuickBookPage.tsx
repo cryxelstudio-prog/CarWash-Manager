@@ -50,6 +50,7 @@ export default function QuickBookPage() {
     scheduled_time: "09:00",
     customer_name: "",
     customer_phone: "",
+    customer_email: "",
     customer_id: "",
     colour: "",
     make: "",
@@ -115,9 +116,11 @@ export default function QuickBookPage() {
       };
       if (mode === "existing") {
         payload.customer_id = Number(form.customer_id);
+        if (form.customer_email) payload.customer_email = form.customer_email;
       } else {
         payload.customer_name = form.customer_name;
         payload.customer_phone = form.customer_phone;
+        if (form.customer_email) payload.customer_email = form.customer_email;
       }
       const b = await api<any>("/api/v1/bookings/quick", { method: "POST", body: JSON.stringify(payload) });
       setConfirmOpen(false);
@@ -240,16 +243,26 @@ export default function QuickBookPage() {
               <label className="label">Phone</label>
               <input className="input" type="tel" required value={form.customer_phone} onChange={(e) => set("customer_phone", e.target.value)} placeholder="082 000 0000" />
             </div>
+            <div className="sm:col-span-2">
+              <label className="label">{easyMode ? "Email (optional — for ready alerts)" : "Customer email (optional)"}</label>
+              <input className="input" type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} placeholder="owner@email.com" />
+            </div>
           </div>
         ) : (
-          <div>
-            <label className="label">Customer</label>
-            <select className="input" required value={form.customer_id} onChange={(e) => set("customer_id", e.target.value)}>
-              <option value="">Select…</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>{c.full_name || `${c.first_name} ${c.last_name}`} · {c.phone}</option>
-              ))}
-            </select>
+          <div className="space-y-3">
+            <div>
+              <label className="label">Customer</label>
+              <select className="input" required value={form.customer_id} onChange={(e) => set("customer_id", e.target.value)}>
+                <option value="">Select…</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.full_name || `${c.first_name} ${c.last_name}`} · {c.phone}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Email for ready alert (optional)</label>
+              <input className="input" type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} placeholder="Uses customer email if blank" />
+            </div>
           </div>
         )}
 

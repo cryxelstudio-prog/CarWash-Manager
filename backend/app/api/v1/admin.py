@@ -5,16 +5,17 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1.helpers import bad_request, not_found
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.integrations import base as integrations
 from app.integrations.outlook import get_calendar_service, get_notification_service, outlook_config, test_outlook_connection
-from app.models import Activity, ApplicationSetting, AuditLog, Booking, Customer, Integration, Notification, User, Vehicle
+from app.models import Activity, ApplicationSetting, AuditLog, Booking, Customer, Integration, Notification, Role, User, Vehicle
 from app.schemas.entities import IntegrationOut, NotificationOut, SettingIn
 from app.security.deps import AuthContext, CSRFUser, require_permission
+from app.security.passwords import hash_password
 from app.services.backup import create_backup, list_backups, restore_backup
 from app.services.bootstrap import get_setting, set_setting
 from app.services.launch import detect_access_urls, launch_status, save_launch_platform
@@ -23,7 +24,7 @@ router = APIRouter(tags=["admin"])
 
 
 @router.get("/settings")
-def get_settings_all(db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage", "dashboard.view"))):
+def get_settings_all(db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage"))):
     rows = db.query(ApplicationSetting).order_by(ApplicationSetting.category, ApplicationSetting.key).all()
     return {
         "items": [
@@ -50,6 +51,7 @@ def branding(db: Session = Depends(get_db)):
         "hosting.cors_origins_extra", "app.version",
         "vehicles.show_registration", "vehicles.require_registration", "vehicles.hide_registration",
         "payments.allow_salary_deduction", "payments.salary_monthly_cap",
+        "customer.alert.email_when_done", "customer.alert.ready_subject", "customer.alert.ready_template",
     ]
     return {k: get_setting(db, k) for k in keys}
 
@@ -285,24 +287,140 @@ def diagnostics(db: Session = Depends(get_db), ctx: AuthContext = Depends(requir
     }
 
 
+class UserCreateIn(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    email: str | None = None
+    phone: str | None = None
+    role_id: int
+    branch_id: int | None = None
+    is_active: bool = True
+
+
+class UserUpdateIn(BaseModel):
+    full_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    role_id: int | None = None
+    branch_id: int | None = None
+    is_active: bool | None = None
+    password: str | None = None
+
+
+def _user_row(u: User) -> dict:
+    return {
+        "id": u.id,
+        "username": u.username,
+        "full_name": u.full_name,
+        "email": u.email,
+        "phone": u.phone,
+        "role_id": u.role_id,
+        "role_name": u.role.display_name if u.role else None,
+        "role_code": u.role.name if u.role else None,
+        "branch_id": u.branch_id,
+        "is_active": u.is_active,
+        "is_super_admin": u.is_super_admin,
+        "last_login_at": u.last_login_at,
+        "easy_mode": u.easy_mode,
+    }
+
+
 @router.get("/users")
-def list_users(db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("admin.manage"))):
-    rows = db.query(User).filter(User.is_deleted.is_(False)).all()
+def list_users(db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("users.manage", "admin.manage"))):
+    rows = (
+        db.query(User)
+        .options(joinedload(User.role))
+        .filter(User.is_deleted.is_(False))
+        .order_by(User.username)
+        .all()
+    )
+    return {"items": [_user_row(u) for u in rows]}
+
+
+@router.get("/roles")
+def list_roles(db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("users.manage", "admin.manage"))):
+    rows = db.query(Role).order_by(Role.display_name).all()
+    # Hide raw custom empty role from pickers unless already used — still return all system roles
     return {
         "items": [
             {
-                "id": u.id,
-                "username": u.username,
-                "full_name": u.full_name,
-                "email": u.email,
-                "role_id": u.role_id,
-                "is_active": u.is_active,
-                "is_super_admin": u.is_super_admin,
-                "last_login_at": u.last_login_at,
+                "id": r.id,
+                "name": r.name,
+                "display_name": r.display_name,
+                "description": r.description,
+                "is_system": r.is_system,
             }
-            for u in rows
+            for r in rows
+            if r.name != "custom"
         ]
     }
+
+
+@router.post("/users", status_code=201)
+def create_user(payload: UserCreateIn, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("users.manage", "admin.manage"))):
+    username = (payload.username or "").strip().lower()
+    if len(username) < 2:
+        bad_request("Username is required")
+    if len(payload.password or "") < 6:
+        bad_request("Password must be at least 6 characters")
+    role = db.get(Role, payload.role_id)
+    if not role:
+        bad_request("Role not found")
+    # Only super_admin/owner may create another super-admin-capable role
+    if role.name in ("super_admin",) and not (ctx.user.is_super_admin or (ctx.user.role and ctx.user.role.name in ("super_admin", "owner"))):
+        bad_request("Only Super Admin / Owner can assign Super Admin")
+    if db.query(User).filter(User.username == username, User.is_deleted.is_(False)).first():
+        bad_request("Username already exists")
+    u = User(
+        username=username,
+        password_hash=hash_password(payload.password),
+        full_name=(payload.full_name or username).strip(),
+        email=(payload.email or "").strip() or None,
+        phone=(payload.phone or "").strip() or None,
+        role_id=role.id,
+        branch_id=payload.branch_id,
+        is_active=bool(payload.is_active),
+        is_super_admin=role.name == "super_admin",
+    )
+    db.add(u)
+    db.commit()
+    u = db.query(User).options(joinedload(User.role)).filter(User.id == u.id).first()
+    return _user_row(u)
+
+
+@router.put("/users/{user_id}")
+def update_user(user_id: int, payload: UserUpdateIn, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("users.manage", "admin.manage"))):
+    u = db.get(User, user_id)
+    if not u or u.is_deleted:
+        not_found()
+    if payload.role_id is not None:
+        role = db.get(Role, payload.role_id)
+        if not role:
+            bad_request("Role not found")
+        if role.name == "super_admin" and not (ctx.user.is_super_admin or (ctx.user.role and ctx.user.role.name in ("super_admin", "owner"))):
+            bad_request("Only Super Admin / Owner can assign Super Admin")
+        u.role_id = role.id
+        u.is_super_admin = role.name == "super_admin"
+    if payload.full_name is not None:
+        u.full_name = payload.full_name.strip() or u.full_name
+    if payload.email is not None:
+        u.email = payload.email.strip() or None
+    if payload.phone is not None:
+        u.phone = payload.phone.strip() or None
+    if payload.branch_id is not None:
+        u.branch_id = payload.branch_id or None
+    if payload.is_active is not None:
+        if u.id == ctx.user.id and not payload.is_active:
+            bad_request("You cannot deactivate your own account")
+        u.is_active = payload.is_active
+    if payload.password:
+        if len(payload.password) < 6:
+            bad_request("Password must be at least 6 characters")
+        u.password_hash = hash_password(payload.password)
+    db.commit()
+    u = db.query(User).options(joinedload(User.role)).filter(User.id == u.id).first()
+    return _user_row(u)
 
 
 # ── Launch hub / staff access / branding upload ────────────────────
@@ -315,7 +433,7 @@ class LaunchPlatformIn(BaseModel):
 @router.get("/launch")
 def get_launch(
     db: Session = Depends(get_db),
-    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage", "dashboard.view")),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage")),
 ):
     return launch_status(db)
 
@@ -324,7 +442,7 @@ def get_launch(
 def staff_access(
     request: Request,
     db: Session = Depends(get_db),
-    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage", "dashboard.view", "queue.manage")),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage")),
 ):
     """LAN + invite helpers for phone QR / link login."""
     access = detect_access_urls(db)
@@ -380,7 +498,7 @@ def test_outlook(
 @router.get("/owner-alerts")
 def get_owner_alerts(
     db: Session = Depends(get_db),
-    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage", "dashboard.view")),
+    ctx: AuthContext = Depends(require_permission("settings.manage", "admin.manage")),
 ):
     from app.services.owner_alerts import owner_alert_settings
     return {"settings": owner_alert_settings(db), "outlook": outlook_config(db)}
@@ -447,10 +565,20 @@ def update_branding(
         "vehicles.hide_registration",
         "payments.allow_salary_deduction",
         "payments.salary_monthly_cap",
+        "customer.alert.email_when_done",
+        "customer.alert.ready_subject",
+        "customer.alert.ready_template",
     }
     for key, value in (payload or {}).items():
         if key in allowed:
             set_setting(db, key, "" if value is None else str(value), category=key.split(".")[0])
     db.commit()
-    keys = list(allowed) + ["app.version", "payments.allow_salary_deduction", "payments.salary_monthly_cap"]
+    keys = list(allowed) + [
+        "app.version",
+        "payments.allow_salary_deduction",
+        "payments.salary_monthly_cap",
+        "customer.alert.email_when_done",
+        "customer.alert.ready_subject",
+        "customer.alert.ready_template",
+    ]
     return {k: get_setting(db, k) for k in keys}

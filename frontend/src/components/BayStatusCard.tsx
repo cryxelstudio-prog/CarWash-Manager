@@ -1,4 +1,4 @@
-import { Car, Clock3, Ticket, UserRound } from "lucide-react";
+import { Car, Clock3, Ticket, UserRound, CheckCircle2 } from "lucide-react";
 import { STAGE_LABELS } from "../lib/api";
 import { useEasyMode } from "../hooks/useEasyMode";
 import { useBranding } from "../hooks/useBranding";
@@ -13,6 +13,7 @@ export type BayBoardItem = {
   assigned_staff?: string | null;
   branch_name?: string | null;
   current_vehicle?: {
+    booking_id?: number;
     registration?: string | null;
     ticket_number?: string | null;
     booking_number?: string;
@@ -22,6 +23,7 @@ export type BayBoardItem = {
     model?: string | null;
     customer?: string | null;
     customer_phone?: string | null;
+    customer_email?: string | null;
     service?: string | null;
     stage?: string;
     eta?: string | null;
@@ -32,33 +34,54 @@ export type BayBoardItem = {
 };
 
 const STATUS_STYLES: Record<string, { bg: string; ring: string; label: string; easyLabel: string; pulse?: boolean }> = {
-  AVAILABLE: { bg: "from-emerald-500 to-teal-600", ring: "ring-emerald-400/40", label: "Available", easyLabel: "Bay free" },
-  OPEN: { bg: "from-sky-500 to-cyan-600", ring: "ring-sky-400/40", label: "Open", easyLabel: "Bay free" },
-  BUSY: { bg: "from-orange-500 to-amber-600", ring: "ring-orange-400/50", label: "Busy", easyLabel: "Bay busy", pulse: true },
-  OFFLINE: { bg: "from-slate-500 to-slate-700", ring: "ring-slate-400/30", label: "Offline", easyLabel: "Bay offline" },
-  CLOSED: { bg: "from-rose-600 to-red-800", ring: "ring-rose-400/30", label: "Closed", easyLabel: "Bay closed" },
+  AVAILABLE: { bg: "from-emerald-500 to-green-600", ring: "ring-emerald-400/50", label: "Available", easyLabel: "Bay free" },
+  OPEN: { bg: "from-emerald-500 to-teal-600", ring: "ring-emerald-400/40", label: "Open", easyLabel: "Bay free" },
+  BUSY: { bg: "from-amber-500 to-orange-600", ring: "ring-orange-400/60", label: "Busy", easyLabel: "Bay busy", pulse: true },
+  READY: { bg: "from-sky-500 to-blue-600", ring: "ring-sky-400/50", label: "Ready for collection", easyLabel: "Ready" },
+  OFFLINE: { bg: "from-slate-400 to-slate-600", ring: "ring-slate-400/30", label: "Offline", easyLabel: "Bay offline" },
+  CLOSED: { bg: "from-slate-500 to-slate-700", ring: "ring-slate-500/30", label: "Closed", easyLabel: "Bay closed" },
 };
 
 export default function BayStatusCard({
   bay,
   onSetStatus,
+  onDone,
   compact = false,
 }: {
   bay: BayBoardItem;
   onSetStatus?: (status: string) => void;
+  onDone?: (bookingId: number, ticket?: string | null, vehicle?: string | null) => void;
   compact?: boolean;
 }) {
   const { easyMode } = useEasyMode();
   const { branding } = useBranding();
   const showReg = isShowRegistration(branding);
-  const style = STATUS_STYLES[bay.status] || STATUS_STYLES.AVAILABLE;
+  const rawStatus = bay.status || "AVAILABLE";
+  let effective = rawStatus;
+  if (rawStatus === "OFFLINE" || rawStatus === "CLOSED") {
+    effective = rawStatus;
+  } else if (bay.current_vehicle?.stage === "READY" || rawStatus === "READY") {
+    effective = "READY";
+  } else if (bay.current_vehicle) {
+    effective = "BUSY";
+  } else if (rawStatus === "OPEN") {
+    effective = "AVAILABLE";
+  }
+  const style = STATUS_STYLES[effective] || STATUS_STYLES.AVAILABLE;
   const v = bay.current_vehicle;
   const statusLabel = easyMode ? style.easyLabel : style.label;
   const ticket = v?.ticket_number || v?.booking_number;
   const desc = vehicleDescription(v);
+  const canDone = !!v?.booking_id && v.stage !== "READY" && v.stage !== "COLLECTED" && onDone;
 
   return (
-    <div className={`card overflow-hidden ${style.pulse && !easyMode ? "bay-pulse" : ""} ring-1 ${style.ring}`}>
+    <div
+      className={`card overflow-hidden ${style.pulse ? "bay-pulse" : ""} ring-2 ${style.ring} ${
+        effective === "BUSY" ? "border-orange-300/80 dark:border-orange-700/50" : ""
+      } ${effective === "READY" ? "border-sky-300/80 dark:border-sky-700/50" : ""} ${
+        effective === "AVAILABLE" || effective === "OPEN" ? "border-emerald-200/80 dark:border-emerald-800/40" : ""
+      }`}
+    >
       <div className={`bg-gradient-to-br ${style.bg} px-4 py-4 text-white`}>
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -67,7 +90,7 @@ export default function BayStatusCard({
             </div>
             <div className={`${compact ? "text-2xl" : easyMode ? "text-4xl" : "text-3xl"} font-extrabold tracking-tight`}>{bay.name}</div>
           </div>
-          <div className={`rounded-full bg-white/20 backdrop-blur px-3 py-1 ${easyMode ? "text-base" : "text-sm"} font-bold uppercase tracking-wide`}>
+          <div className={`rounded-full bg-white/25 backdrop-blur px-3 py-1.5 ${easyMode ? "text-base" : "text-sm"} font-bold uppercase tracking-wide shadow-sm`}>
             {statusLabel}
           </div>
         </div>
@@ -106,11 +129,28 @@ export default function BayStatusCard({
               <span className="inline-flex items-center gap-1"><Clock3 size={14} /> {v.eta || "—"}</span>
               <span className="inline-flex items-center gap-1"><UserRound size={14} /> {v.staff || bay.assigned_staff || "Unassigned"}</span>
             </div>
+            {canDone && (
+              <button
+                type="button"
+                className={`btn-primary w-full !bg-emerald-600 hover:!bg-emerald-700 ${easyMode ? "!text-lg !py-4" : ""}`}
+                onClick={() => onDone!(v.booking_id!, ticket, desc)}
+              >
+                <CheckCircle2 size={easyMode ? 22 : 18} />
+                {easyMode ? "Done — car ready" : "Mark complete"}
+              </button>
+            )}
+            {v.stage === "READY" && (
+              <div className="rounded-xl bg-sky-50 dark:bg-sky-950/40 px-3 py-2 text-sky-800 dark:text-sky-200 text-sm font-semibold text-center">
+                Ready for collection
+              </div>
+            )}
           </>
         ) : (
-          <div className="py-4 text-center text-slate-400">
-            <Car className="mx-auto mb-2 opacity-40" size={easyMode ? 36 : 28} />
-            <div className={easyMode ? "text-base" : "text-sm"}>{easyMode ? "No car in this bay" : "No vehicle in bay"}</div>
+          <div className="py-6 text-center text-slate-400">
+            <Car className="mx-auto mb-2 opacity-40" size={easyMode ? 40 : 28} />
+            <div className={`font-medium ${easyMode ? "text-base text-slate-500" : "text-sm"}`}>
+              {easyMode ? "Bay free — no car here" : "No vehicle in bay"}
+            </div>
             {bay.assigned_staff && <div className="mt-1 text-xs">Staff: {bay.assigned_staff}</div>}
           </div>
         )}
