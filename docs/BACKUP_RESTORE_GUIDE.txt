@@ -1,0 +1,6 @@
+Backup & Restore
+================
+Create: Backup page, Backup.cmd, or POST /api/v1/backups
+Restore: Restore.cmd <zip> or POST /api/v1/backups/restore?name=...
+Backups are ZIP files containing carwash.db (+ WAL/SHM if present) and uploads.
+A pre-restore safety copy is written automatically.

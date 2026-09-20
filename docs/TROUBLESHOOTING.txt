@@ -1,0 +1,7 @@
+Troubleshooting
+===============
+- Port in use: change CARWASH_PORT or stop the other process (Stop.cmd).
+- Blank UI: ensure frontend/dist exists (run BUILD.cmd).
+- Login fails after restore: confirm correct backup and restart.
+- CSRF errors: refresh the page to obtain a new CSRF cookie/token.
+- Check Diagnostics page and logs/ folder.

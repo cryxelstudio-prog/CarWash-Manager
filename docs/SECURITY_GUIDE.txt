@@ -1,0 +1,8 @@
+Security Guide
+==============
+- Passwords hashed with bcrypt.
+- Session cookies are HTTP-only + signed; CSRF token required on mutating requests.
+- Soft-delete/archive for core records.
+- Parameterized SQLAlchemy queries.
+- Logs redact secrets.
+- Do not expose port 8787 to the public Internet without TLS reverse proxy.

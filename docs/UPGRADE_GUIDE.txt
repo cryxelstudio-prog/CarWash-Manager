@@ -1,0 +1,7 @@
+Upgrade Guide
+=============
+1. Stop the app (Stop.cmd).
+2. Backup (Backup.cmd).
+3. Replace application files (keep ./data and ./backups).
+4. Run BUILD.cmd
+5. Run Run.cmd and verify /health.

@@ -1,0 +1,4 @@
+Power Apps Integration (OPTIONAL)
+=================================
+REST API at /api/v1 is the clean boundary for Power Apps custom connectors.
+No Power Platform configuration is required for local use.

@@ -1,0 +1,4 @@
+SharePoint Setup (OPTIONAL)
+===========================
+Not required. SharePoint adapter is a null implementation in v0.1.0.
+Status card remains Not Configured.

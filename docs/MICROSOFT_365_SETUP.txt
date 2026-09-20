@@ -1,0 +1,5 @@
+Microsoft 365 Setup (OPTIONAL)
+==============================
+Not required to run the product.
+When ready: register an Entra app, add credentials via Integrations (future), enable M365 Auth / Calendar adapters.
+Until configured, status remains Not Configured and local auth continues to work.

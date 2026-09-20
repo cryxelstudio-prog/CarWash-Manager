@@ -1,0 +1,9 @@
+Admin Guide
+===========
+- Create users via Admin (super admin from first-run).
+- Configure branding and locale under Settings.
+- Manage branches, wash bays, services and packages.
+- Use Roles/RBAC permissions enforced by API.
+- Review Audit Log and Activity timeline.
+- Create backups regularly (Backup page or Backup.cmd).
+- Integrations page shows connector status (all start Not Configured).

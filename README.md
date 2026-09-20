@@ -1,23 +1,59 @@
 # Car Wash Management Platform
 
-Production-quality local-first car wash management platform for Windows.
+Local-first car wash operations software for South Africa (ZAR / Africa/Johannesburg).
 
-**Status:** Initial repository — application build in progress.
+**Version:** 0.1.0
+
+Works with **zero** Microsoft 365 / SharePoint / Power Apps / payment-gateway configuration.
 
 ## Quick start (Windows)
 
-1. Extract or clone this repository.
-2. Double-click `BUILD.cmd`.
+1. Install Python 3.11+ and Node.js 18+.
+2. Double-click `BUILD.cmd` (leaves the window open on failure).
 3. Double-click `Run.cmd`.
-4. Open the URL shown (typically `http://localhost:8787`).
-5. Complete first-run setup to create your administrator.
+4. Open http://localhost:8787
+5. Complete first-run setup (admin, company, branch). Optional demo data available.
 
-No Microsoft 365, SharePoint, or cloud configuration is required to run.
+## Quick start (Linux / this box)
+
+```bash
+./scripts/build.sh
+./scripts/dev_run.sh
+# open http://127.0.0.1:8787
+```
 
 ## Stack
 
-- Backend: Python FastAPI + SQLite
-- Frontend: React + TypeScript + Vite + Tailwind
-- Version: 0.1.0
+- Backend: Python FastAPI + SQLAlchemy 2 + Alembic + SQLite (WAL) + Pydantic v2 + bcrypt sessions
+- Frontend: React 18 + TypeScript + Vite + Tailwind
+- Default port: **8787**
+- Portable data directory: `./data`
 
-See `docs/` once the build lands.
+## Features (implemented)
+
+Dashboard KPIs, customers, vehicles, services, packages, bookings, live wash queue (stage moves), calendar views, employees, attendance, payments, invoices/receipts (PDF), cash-up, inventory, suppliers, expenses, reports (CSV/Excel), branches, wash bays, notifications, branding/settings, integrations centre (all Not Configured), admin users, audit log, activity timeline, diagnostics, backup/restore, global search, first-run wizard, RBAC.
+
+## Integrations
+
+M365 auth/calendar, SharePoint, Power Apps, email/SMS/WhatsApp/Teams, card payments — **adapter interfaces with null implementations**. Status UI only. Never block startup.
+
+## Scripts
+
+| Windows | Purpose |
+|---------|---------|
+| BUILD.cmd | Install deps, build frontend, run tests |
+| Run.cmd | Start server |
+| Stop.cmd | Stop listener on 8787 |
+| Backup.cmd / Restore.cmd | Backup & restore |
+| Diagnostics.cmd | Environment checks |
+| Repair.cmd / Install.cmd / Uninstall.cmd | Maintenance |
+
+## API
+
+- REST: `/api/v1/*`
+- OpenAPI: `/api/docs`
+- Health: `/health`
+
+## Docs
+
+See `docs/` for installation, admin, user, security, backup, API and architecture guides.

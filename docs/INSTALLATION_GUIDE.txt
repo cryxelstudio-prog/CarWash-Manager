@@ -1,0 +1,27 @@
+Car Wash Manager — Installation Guide
+=====================================
+
+Requirements
+- Windows 10/11 or Linux
+- Python 3.11+
+- Node.js 18+ and npm
+- No Microsoft cloud account required
+
+Windows (portable)
+1. Extract or clone this repository.
+2. Run BUILD.cmd
+3. Run Run.cmd
+4. Browse to http://localhost:8787
+5. Complete first-run wizard.
+
+Linux
+1. ./scripts/build.sh
+2. ./scripts/dev_run.sh
+
+Data
+- Portable mode stores SQLite DB and uploads under ./data
+- Backups under ./backups
+- Logs under ./logs
+
+Firewall (LAN)
+- Allow inbound TCP 8787 if serving other PCs on the LAN.
