@@ -42,7 +42,8 @@ M365 auth/calendar, SharePoint, Power Apps, email/SMS/WhatsApp/Teams, card payme
 | Windows | Purpose |
 |---------|---------|
 | BUILD.cmd | Install deps, build frontend, run tests |
-| Run.cmd | Start server |
+| Run.cmd | Start server (console) |
+| Run-background.cmd | Start minimized on any Windows PC |
 | Stop.cmd | Stop listener on 8787 |
 | Backup.cmd / Restore.cmd | Backup & restore |
 | Diagnostics.cmd | Environment checks |
@@ -59,3 +60,8 @@ M365 auth/calendar, SharePoint, Power Apps, email/SMS/WhatsApp/Teams, card payme
 **Managers:** read **[`docs/MANAGER_README.txt`](docs/MANAGER_README.txt)** first — where the app lives, hosting options, setup checklist, and FAQ in plain English.
 
 Also: `docs/LAUNCH_GUIDE.txt`, `docs/HOSTING_OPTIONS.txt`, `docs/PORTAL_AND_INVITES.txt`, installation / admin / user / security / backup / API / architecture guides under `docs/`.
+
+
+### Background start (any Windows PC)
+
+After `BUILD.cmd`, use `Run-background.cmd` to start the server minimized. Works the same on any machine — no hardcoded paths.

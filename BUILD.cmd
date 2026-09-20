@@ -115,5 +115,7 @@ if errorlevel 1 (
 echo.
 echo BUILD complete. Next: double-click Run.cmd then open http://localhost:8787
 echo BUILD complete.>> "%LOG%"
+REM Skip pause for automation: set CARWASH_NOPAUSE=1
+if /I "%CARWASH_NOPAUSE%"=="1" exit /b 0
 pause
 exit /b 0

@@ -4,7 +4,7 @@ Upgrade Guide
 2. Backup (Backup.cmd).
 3. Replace application files (keep ./data and ./backups).
 4. Run BUILD.cmd
-5. Run Run.cmd and verify /health.
+5. Run Run.cmd (or Run-background.cmd) and verify /health.
 
 
 ================================================================================
@@ -14,7 +14,7 @@ UPGRADE TO 0.9.0 (Windows refresh)
 2. Backup (Backup.cmd) — keep a copy of the data folder.
 3. Replace / update the CarWash-Manager files with v0.9.0.
 4. Double-click BUILD.cmd (installs deps, builds frontend, runs tests).
-5. Double-click Run.cmd.
+5. Double-click Run.cmd (or Run-background.cmd for minimized start).
 6. Open http://localhost:8787 — confirm version 0.9.0 on Diagnostics / Help.
 7. New: Admin → Users → Invite staff; customers use /portal/register.
 8. Phones: Launch → re-scan QR if your LAN IP changed.
