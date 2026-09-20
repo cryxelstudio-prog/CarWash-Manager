@@ -81,7 +81,7 @@ try {
   Log "FAILED: $($_.Exception.Message)"
   Write-Host "FAILED: $($_.Exception.Message)" -ForegroundColor Red
   Write-Host "Full log: $log"
-  Pause
+  if ($env:CARWASH_NONINTERACTIVE -ne "1") { Pause }
   exit 1
 }
-Pause
+if ($env:CARWASH_NONINTERACTIVE -ne "1") { Pause }
