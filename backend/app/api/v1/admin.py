@@ -43,6 +43,7 @@ def branding(db: Session = Depends(get_db)):
         "app.name", "company.name", "company.phone", "company.email", "company.address",
         "app.accent_colour", "app.logo_url", "app.favicon_url", "app.receipt_footer",
         "locale.currency", "locale.currency_symbol", "locale.timezone", "locale.date_format", "locale.tax_rate",
+        "hosting.cors_origins_extra", "app.version",
     ]
     return {k: get_setting(db, k) for k in keys}
 

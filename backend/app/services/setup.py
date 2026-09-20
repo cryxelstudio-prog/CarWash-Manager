@@ -48,8 +48,8 @@ def complete_setup(db: Session, payload: SetupCompleteIn) -> User:
     db.flush()
     admin.branch_id = branch.id
 
-    for i in range(1, 4):
-        db.add(WashBay(branch_id=branch.id, name=f"Bay {i}", bay_number=i, is_active=True))
+    for i in range(1, 3):
+        db.add(WashBay(branch_id=branch.id, name=f"Bay {i}", bay_number=i, status="AVAILABLE", is_active=True))
 
     services = payload.services or [
         SetupServiceLike("EXT", "Exterior Wash", 80, 20),

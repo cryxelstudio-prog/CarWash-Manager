@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import PageHeader from "../components/ui/PageHeader";
 import Modal from "../components/ui/Modal";
 import { api, ApiError, formatMoney, STAGE_LABELS } from "../lib/api";
@@ -64,7 +65,7 @@ export default function BookingsPage() {
 
   return (
     <div>
-      <PageHeader title="Bookings" subtitle="Create and manage wash bookings" actions={<button className="btn-primary" onClick={() => setOpen(true)}>New booking</button>} />
+      <PageHeader title="Bookings" subtitle="Create and manage wash bookings" actions={<><Link className="btn-primary" to="/quick-book">Quick Book</Link><button className="btn-secondary" onClick={() => setOpen(true)}>Advanced</button></>} />
       {error && <div className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
       <div className="card overflow-auto">
         <table className="table">

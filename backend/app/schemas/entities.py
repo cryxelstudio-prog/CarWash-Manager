@@ -187,6 +187,7 @@ class StageMoveIn(BaseModel):
     to_stage: str
     notes: str | None = None
     employee_id: int | None = None
+    wash_bay_id: int | None = None
 
 
 class PaymentIn(BaseModel):
@@ -314,6 +315,9 @@ class WashBayIn(BaseModel):
     name: str
     bay_number: int = 1
     bay_type: str = "STANDARD"
+    status: str = "AVAILABLE"
+    status_locked: bool = False
+    assigned_employee_id: int | None = None
     is_active: bool = True
     notes: str | None = None
 
@@ -321,6 +325,29 @@ class WashBayIn(BaseModel):
 class WashBayOut(WashBayIn):
     model_config = {"from_attributes": True}
     id: int
+
+
+class BayStatusUpdate(BaseModel):
+    status: str
+    assigned_employee_id: int | None = None
+    notes: str | None = None
+    lock: bool | None = None
+
+
+class QuickBookIn(BaseModel):
+    branch_id: int
+    vehicle_type: str = "SEDAN"
+    service_id: int | None = None
+    package_id: int | None = None
+    scheduled_date: date
+    scheduled_time: time | None = None
+    customer_id: int | None = None
+    customer_name: str | None = None
+    customer_phone: str | None = None
+    registration: str | None = None
+    wash_bay_id: int | None = None  # None / omit = Any
+    notes: str | None = None
+    source: str = "WALK_IN"
 
 
 class CashUpIn(BaseModel):
@@ -424,3 +451,5 @@ class DashboardOut(BaseModel):
     system_health: str = "ok"
     integrations_ok: int = 0
     integrations_total: int = 0
+    queue_length: int = 0
+    bays: list[dict] = []

@@ -55,4 +55,6 @@ export interface Dashboard {
   system_health: string;
   integrations_ok: number;
   integrations_total: number;
+  queue_length?: number;
+  bays?: any[];
 }

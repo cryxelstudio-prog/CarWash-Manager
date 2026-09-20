@@ -36,6 +36,7 @@ from app.models.models import (
     VehicleInspection,
     WashBay,
     WashStageHistory,
+    BayStatus,
 )
 
 __all__ = [
@@ -64,6 +65,7 @@ __all__ = [
     "Attendance",
     "WashBay",
     "WashStageHistory",
+    "BayStatus",
     "VehicleInspection",
     "Attachment",
     "LoyaltyAccount",

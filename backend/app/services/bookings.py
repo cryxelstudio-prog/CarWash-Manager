@@ -175,6 +175,9 @@ def create_booking(db: Session, data: BookingIn, user_id: int | None = None, use
         entity_id=booking.id,
     )
     db.commit()
+    if booking.wash_bay_id:
+        from app.services.bays import sync_bay_occupancy
+        sync_bay_occupancy(db, booking.wash_bay_id)
     return get_booking(db, booking.id)
 
 
@@ -230,6 +233,8 @@ def move_stage(db: Session, booking_id: int, data: StageMoveIn, user_id: int | N
     booking.wash_stage = to_stage.value
     if data.employee_id:
         booking.assigned_employee_id = data.employee_id
+    if getattr(data, "wash_bay_id", None) is not None:
+        booking.wash_bay_id = data.wash_bay_id
     db.add(
         WashStageHistory(
             booking_id=booking.id,
@@ -251,4 +256,100 @@ def move_stage(db: Session, booking_id: int, data: StageMoveIn, user_id: int | N
         entity_id=booking.id,
     )
     db.commit()
+    from app.services.bays import sync_bay_occupancy
+    sync_bay_occupancy(db, booking.wash_bay_id)
     return get_booking(db, booking.id)
+
+
+def quick_book(db: Session, data, user_id: int | None = None, username: str | None = None) -> Booking:
+    """Lazy-simple booking: resolve/create customer + vehicle, then book."""
+    from app.models import Customer, Vehicle
+    from app.schemas.entities import BookingIn, QuickBookIn
+    from app.utils.numbering import next_number
+
+    if not isinstance(data, QuickBookIn):
+        data = QuickBookIn.model_validate(data)
+
+    if not data.service_id and not data.package_id:
+        raise ValueError("Select a service or package")
+
+    customer = None
+    if data.customer_id:
+        customer = db.get(Customer, data.customer_id)
+        if not customer or customer.is_deleted:
+            raise ValueError("Customer not found")
+    else:
+        name = (data.customer_name or "").strip()
+        phone = (data.customer_phone or "").strip()
+        if not name or not phone:
+            raise ValueError("Customer name and phone are required")
+        # Try match by phone first
+        customer = (
+            db.query(Customer)
+            .filter(Customer.is_deleted.is_(False), Customer.phone == phone)
+            .first()
+        )
+        if not customer:
+            parts = name.split(None, 1)
+            first = parts[0]
+            last = parts[1] if len(parts) > 1 else "."
+            customer = Customer(
+                customer_number=next_number(db, Customer, "customer_number", "CUS"),
+                first_name=first,
+                last_name=last,
+                phone=phone,
+                preferred_branch_id=data.branch_id,
+                is_active=True,
+            )
+            db.add(customer)
+            db.flush()
+
+    # Vehicle: reuse customer's first matching size/reg or create a placeholder
+    reg = (data.registration or "").strip().upper()
+    vehicle = None
+    if reg:
+        vehicle = (
+            db.query(Vehicle)
+            .filter(Vehicle.is_deleted.is_(False), Vehicle.customer_id == customer.id, Vehicle.registration == reg)
+            .first()
+        )
+    if not vehicle:
+        # Prefer an existing vehicle of this size
+        vehicle = (
+            db.query(Vehicle)
+            .filter(
+                Vehicle.is_deleted.is_(False),
+                Vehicle.customer_id == customer.id,
+                Vehicle.size == data.vehicle_type,
+            )
+            .first()
+        )
+    if not vehicle:
+        if not reg:
+            # Generate a walk-in placeholder registration
+            reg = f"WALK-{customer.id}-{int(datetime.utcnow().timestamp()) % 100000}"
+        vehicle = Vehicle(
+            customer_id=customer.id,
+            registration=reg,
+            size=data.vehicle_type or "SEDAN",
+            make=None,
+            model=None,
+            is_active=True,
+        )
+        db.add(vehicle)
+        db.flush()
+
+    payload = BookingIn(
+        customer_id=customer.id,
+        vehicle_id=vehicle.id,
+        branch_id=data.branch_id,
+        service_id=data.service_id,
+        package_id=data.package_id,
+        wash_bay_id=data.wash_bay_id,
+        scheduled_date=data.scheduled_date,
+        scheduled_time=data.scheduled_time,
+        source=data.source or "WALK_IN",
+        notes=data.notes,
+        customer_phone=data.customer_phone or customer.phone,
+    )
+    return create_booking(db, payload, user_id=user_id, username=username)

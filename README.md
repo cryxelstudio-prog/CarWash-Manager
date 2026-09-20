@@ -2,7 +2,7 @@
 
 Local-first car wash operations software for South Africa (ZAR / Africa/Johannesburg).
 
-**Version:** 0.1.0
+**Version:** 0.2.0
 
 Works with **zero** Microsoft 365 / SharePoint / Power Apps / payment-gateway configuration.
 

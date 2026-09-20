@@ -219,6 +219,14 @@ class Branch(Base, TimestampMixin, SoftDeleteMixin):
     employees: Mapped[list["Employee"]] = relationship(back_populates="branch")
 
 
+class BayStatus(str, enum.Enum):
+    AVAILABLE = "AVAILABLE"
+    BUSY = "BUSY"
+    OPEN = "OPEN"
+    OFFLINE = "OFFLINE"
+    CLOSED = "CLOSED"
+
+
 class WashBay(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "wash_bays"
 
@@ -227,10 +235,14 @@ class WashBay(Base, TimestampMixin, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(String(128))
     bay_number: Mapped[int] = mapped_column(Integer, default=1)
     bay_type: Mapped[str] = mapped_column(String(64), default="STANDARD")
+    status: Mapped[str] = mapped_column(String(32), default=BayStatus.AVAILABLE.value, index=True)
+    status_locked: Mapped[bool] = mapped_column(Boolean, default=False)  # True when manager forces Offline/Closed
+    assigned_employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employees.id"), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     branch: Mapped["Branch"] = relationship(back_populates="wash_bays")
+    assigned_employee: Mapped[Optional["Employee"]] = relationship(foreign_keys=[assigned_employee_id])
 
 
 class Employee(Base, TimestampMixin, SoftDeleteMixin):

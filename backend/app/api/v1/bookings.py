@@ -10,10 +10,10 @@ from app.api.v1.helpers import bad_request, not_found
 from app.core.database import get_db
 from app.models import Booking
 from app.models.models import BookingStatus, WashStage
-from app.schemas.entities import BookingIn, BookingOut, InspectionIn, StageMoveIn
+from app.schemas.entities import BookingIn, BookingOut, InspectionIn, QuickBookIn, StageMoveIn
 from app.models import VehicleInspection
 from app.security.deps import AuthContext, CSRFUser, require_permission
-from app.services.bookings import create_booking, get_booking, move_stage, serialize_booking
+from app.services.bookings import create_booking, get_booking, move_stage, quick_book, serialize_booking
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -68,6 +68,16 @@ def list_bookings(
 def create(payload: BookingIn, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("bookings.manage"))):
     try:
         b = create_booking(db, payload, user_id=ctx.user.id, username=ctx.user.username)
+    except ValueError as e:
+        bad_request(str(e))
+    return serialize_booking(b)
+
+
+@router.post("/quick", status_code=201)
+def create_quick(payload: QuickBookIn, db: Session = Depends(get_db), ctx: AuthContext = Depends(require_permission("bookings.manage"))):
+    """One-shot lazy booking for phone users — dropdown-friendly fields."""
+    try:
+        b = quick_book(db, payload, user_id=ctx.user.id, username=ctx.user.username)
     except ValueError as e:
         bad_request(str(e))
     return serialize_booking(b)

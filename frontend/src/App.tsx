@@ -22,6 +22,7 @@ import ExpensesPage from "./pages/ExpensesPage";
 import ReportsPage from "./pages/ReportsPage";
 import BranchesPage from "./pages/BranchesPage";
 import WashBaysPage from "./pages/WashBaysPage";
+import QuickBookPage from "./pages/QuickBookPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="services" element={<ServicesPage />} />
         <Route path="packages" element={<PackagesPage />} />
         <Route path="bookings" element={<BookingsPage />} />
+        <Route path="quick-book" element={<QuickBookPage />} />
         <Route path="queue" element={<QueuePage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="employees" element={<EmployeesPage />} />

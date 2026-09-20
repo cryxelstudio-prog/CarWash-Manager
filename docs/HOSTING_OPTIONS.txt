@@ -1,0 +1,49 @@
+Car Wash Manager — Hosting Options
+====================================
+Version 0.2.0
+
+This app is local-first. Microsoft 365 / SharePoint / Power Apps are optional.
+
+1) Local standalone (default)
+   - Windows: BUILD.cmd then Run.cmd
+   - Opens http://localhost:8787 (or http://127.0.0.1:8787)
+   - SQLite database under ./data — no cloud required
+
+2) LAN / same Wi-Fi (owner phone + manager laptop)
+   - Run binds to 0.0.0.0:8787 by default
+   - On the phone/browser open http://<PC-LAN-IP>:8787
+   - Allow Windows Firewall for port 8787 if prompted
+   - Add the LAN origin to CORS if you use a separate frontend:
+       set CARWASH_CORS_ORIGINS_EXTRA=http://192.168.x.x:8787
+
+3) Self-hosted (IIS / nginx / reverse proxy)
+   - Point the reverse proxy at the FastAPI process (uvicorn on 8787)
+   - Serve the built SPA from frontend/dist (already mounted by the app)
+   - Keep ./data, ./backups, ./logs, ./uploads on persistent disk
+   - Prefer HTTPS termination at the proxy
+
+4) Power Apps as companion frontend
+   - Use OpenAPI at /api/docs (or /api/openapi.json) for a Custom Connector
+   - Base URL: https://<your-host>/api/v1
+   - Auth: session cookie + X-CSRF-Token header (or extend with API keys later)
+   - Allow Power Apps origins via:
+       CARWASH_CORS_ORIGINS_EXTRA=https://apps.powerapps.com,https://make.powerapps.com,<your-env>
+     Defaults already include apps.powerapps.com and make.powerapps.com
+   - Settings → Extra CORS origins stores a tip value; env var applies at process start
+   - See also docs/POWER_APPS_INTEGRATION.txt
+
+5) Future customer portal
+   - Same /api/v1 booking endpoints can power a public booking UI
+   - Keep staff UI on this app; portal would be a separate SPA consuming the API
+
+CORS configuration
+------------------
+Env prefix: CARWASH_
+  CARWASH_CORS_ORIGINS_EXTRA=origin1,origin2
+Restart the app after changing env vars.
+
+OpenAPI / docs
+--------------
+  Interactive docs:  /api/docs
+  ReDoc:             /api/redoc
+  OpenAPI JSON:      /api/openapi.json

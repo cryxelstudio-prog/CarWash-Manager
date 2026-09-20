@@ -2,3 +2,13 @@ Power Apps Integration (OPTIONAL)
 =================================
 REST API at /api/v1 is the clean boundary for Power Apps custom connectors.
 No Power Platform configuration is required for local use.
+
+Quick start
+-----------
+1. Run Car Wash Manager and open /api/docs
+2. Create a Power Apps Custom Connector from /api/openapi.json
+3. Allow origins via CARWASH_CORS_ORIGINS_EXTRA (see docs/HOSTING_OPTIONS.txt)
+4. Authenticate with the same session cookie + X-CSRF-Token used by the web UI
+   (or call /api/v1/auth/login then reuse cookies)
+
+Typical companion screens: Quick Book, Bay Board, today's queue.

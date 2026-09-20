@@ -17,6 +17,7 @@ from app.models import (
     Payment,
 )
 from app.models.models import BookingStatus, PaymentMethod, PaymentStatus, WashStage
+from app.services.bays import bay_board
 
 
 def get_dashboard(db: Session, branch_id: int | None = None) -> dict:
@@ -175,4 +176,11 @@ def get_dashboard(db: Session, branch_id: int | None = None) -> dict:
         "system_health": "ok",
         "integrations_ok": integ_ok,
         "integrations_total": len(integrations),
+        "queue_length": (
+            stage_counts.get(WashStage.WAITING.value, 0)
+            + stage_counts.get(WashStage.ARRIVED.value, 0)
+            + stage_counts.get(WashStage.CHECK_IN.value, 0)
+            + stage_counts.get(WashStage.BOOKED.value, 0)
+        ),
+        "bays": bay_board(db, branch_id=branch_id).get("items", []),
     }

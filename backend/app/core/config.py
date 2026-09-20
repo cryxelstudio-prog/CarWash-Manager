@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CARWASH_", env_file=".env", extra="ignore")
 
     app_name: str = "Car Wash Manager"
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
     debug: bool = False
     host: str = "0.0.0.0"
     port: int = 8787
@@ -48,7 +48,15 @@ class Settings(BaseSettings):
 
     # Security
     bcrypt_rounds: int = 12
-    cors_origins: list[str] = ["http://localhost:8787", "http://127.0.0.1:8787", "http://localhost:5173"]
+    cors_origins: list[str] = [
+        "http://localhost:8787",
+        "http://127.0.0.1:8787",
+        "http://localhost:5173",
+        "https://apps.powerapps.com",
+        "https://make.powerapps.com",
+    ]
+    # Comma-separated extra origins via CARWASH_CORS_ORIGINS_EXTRA (e.g. LAN IP or Power Apps custom)
+    cors_origins_extra: str = ""
 
     # Logging
     log_level: str = "INFO"
@@ -78,6 +86,11 @@ class Settings(BaseSettings):
                     secret_file.chmod(0o600)
                 except OSError:
                     pass
+
+        if self.cors_origins_extra:
+            extras = [o.strip() for o in self.cors_origins_extra.split(",") if o.strip()]
+            merged = list(dict.fromkeys([*self.cors_origins, *extras]))
+            self.cors_origins = merged
 
     @property
     def logs_dir(self) -> Path:

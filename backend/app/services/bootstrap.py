@@ -13,6 +13,7 @@ from app.models import (
     Role,
     RolePermission,
 )
+from app.services.bays import ensure_default_bays
 from app.models.models import IntegrationStatus
 
 log = logging.getLogger("startup")
@@ -124,6 +125,8 @@ DEFAULT_SETTINGS = [
     ("booking.allow_overlap", "false", "boolean", "booking", "Allow overlapping bookings"),
     ("setup.completed", "false", "boolean", "system", "First-run completed"),
     ("loyalty.points_per_rand", "1", "number", "loyalty", "Points earned per R1"),
+    ("hosting.cors_origins_extra", "", "string", "hosting", "Extra CORS origins (comma-separated) for Power Apps / LAN"),
+    ("app.version", "0.2.0", "string", "system", "Displayed app version"),
 ]
 
 
@@ -179,6 +182,10 @@ def ensure_bootstrap(db: Session) -> None:
             )
 
     db.commit()
+    try:
+        ensure_default_bays(db)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("ensure_default_bays: %s", exc)
     log.info("Bootstrap complete")
 
 
