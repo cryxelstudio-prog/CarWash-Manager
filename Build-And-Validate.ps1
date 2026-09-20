@@ -26,11 +26,11 @@ try {
   }
   if (-not $pyCmd) {
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-      throw "Python 3.11–3.13 not found. Install from https://www.python.org/downloads/ (tick 'Add to PATH')."
+      throw "Python 3.11-3.13 not found. Install from https://www.python.org/downloads/ (tick 'Add to PATH')."
     }
     $verOut = & python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
     if ($verOut -notmatch '^3\.(11|12|13)$') {
-      throw "Need Python 3.11–3.13. Found $verOut (Python 3.14 is not supported yet)."
+      throw "Need Python 3.11-3.13. Found $verOut (Python 3.14 is not supported yet)."
     }
     $pyCmd = "python"
     $pyArgs = @()
